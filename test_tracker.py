@@ -422,7 +422,7 @@ def test_site_structure_and_identity_preserved():
         'id="zone-bonds"')]
     assert order == sorted(order)
     for needle in ('key: "highlights", label: "HIGHLIGHTS"',
-                   "th-medallion", "th-spinner", "th-heart th-front", "prefers-reduced-motion",
+                   "th-medallion", "th-spinner", "th-heart th-front",
                    "Audited in public.",
                    "Warmth = \u03a3 (2 \u00f7 (group size \u2212 1)) over shared observations",
                    "best case: 15 two-muse observations",
@@ -440,9 +440,10 @@ def test_site_socialites_stage_pins():
     the Socialites section hosts the owner's 3D spinning-heart stage, driven
     dynamically by the real roll. Pinned: the section keeps its aria-label,
     the demo's structure/heading/copy/hint, the CSS-native spinner
-    animation (owner call 15:04: replace the JS rAF rotation with a native
-    infinite CSS animation) and the reduced-motion kill switch, the DYNAMIC
-    roll flow (buildStage rebuilt on every
+    animation with the owner's !important declarations (owner calls 15:04 +
+    15:42: replace the JS rAF rotation with a native infinite CSS animation,
+    then DELETE the section's reduced-motion kill switch — it parked every
+    stage animation on RM devices), the DYNAMIC roll flow (buildStage rebuilt on every
     window render), the real inter-roll edge web, and the empty-roll
     warming-up branch unchanged."""
     html = _html()
@@ -466,8 +467,6 @@ def test_site_socialites_stage_pins():
     for k in ("th-arrive", "th-heart-spin", "th-heart-float", "th-draw",
               "th-flow", "th-twinkle", "th-logo-breathe"):
         assert "@keyframes " + k in html, k
-    assert ("@media(prefers-reduced-motion:reduce){#zone-socialites *"
-            "{animation:none!important}") in html
     assert 'soc-empty .th-stage{display:none}' in html   # the honest empty window
     # the spin is CSS-native: the full spinner rule exists (keyframes run,
     # staggered by --i, hover/focus/active accelerates to .9s); the JS rAF
@@ -475,9 +474,10 @@ def test_site_socialites_stage_pins():
     # spin since the CSS engine owns it; resize still re-arranges via RO
     assert ('#zone-socialites .th-spinner{position:absolute;inset:0;display:block;'
             'transform-style:preserve-3d;will-change:transform;'
-            'animation:th-heart-spin 3.8s linear infinite;'
-            'animation-delay:calc(var(--i,0)*-430ms)}') in html
-    assert '#zone-socialites .th-person:is(:hover,:focus-visible,.active) .th-spinner{animation-duration:.9s}' in html
+            'animation:th-heart-spin 3.8s linear infinite !important;'
+            'animation-delay:calc(var(--i,0)*-430ms) !important}') in html
+    assert '#zone-socialites .th-person:is(:hover,:focus-visible,.active) .th-spinner{animation-duration:.9s !important}' in html
+    assert "prefers-reduced-motion" not in html  # the kill switch stays deleted
     assert "socSpin" not in html and "socFrame" not in html
     assert "IntersectionObserver" not in html and "ResizeObserver" in html
     # the dynamic roll: buildStage rebuilds per window render, shuffle kept

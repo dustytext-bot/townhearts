@@ -163,7 +163,7 @@
   #zone-socialites .th-center img{display:block;width:190px;height:190px;object-fit:contain;filter:drop-shadow(0 8px 22px #0008);animation:th-logo-breathe 3.6s ease-in-out infinite}
   #zone-socialites .th-medallion{display:grid;width:105px;height:105px;place-items:center;border:2px solid var(--line);border-radius:50%;background:radial-gradient(circle at 50% 42%,#ff9f001c,transparent 64%),var(--medal);perspective:520px;transition:transform .25s,border-color .25s,box-shadow .25s}
   #zone-socialites .th-float{position:relative;display:block;width:52px;height:48px;animation:th-heart-float 3.2s ease-in-out infinite;animation-delay:calc(var(--i)*-370ms)}
-  #zone-socialites .th-spinner{position:absolute;inset:0;display:block;transform-style:preserve-3d;will-change:transform;animation:th-heart-spin 3.8s linear infinite;animation-delay:calc(var(--i,0)*-430ms)}
+  #zone-socialites .th-spinner{position:absolute;inset:0;display:block;transform-style:preserve-3d;will-change:transform;animation:th-heart-spin 3.8s linear infinite !important;animation-delay:calc(var(--i,0)*-430ms) !important}
   #zone-socialites .th-heart{position:absolute;left:10px;top:9px;width:33px;height:33px;border-radius:5px;transform-style:preserve-3d;transform:rotate(45deg) translateZ(0);background:#6b281b;box-shadow:4px 5px 9px #210b0759}
   #zone-socialites .th-heart:before,#zone-socialites .th-heart:after{position:absolute;width:33px;height:33px;content:"";border-radius:50%;background:inherit}
   #zone-socialites .th-heart:before{left:-17px;top:0}
@@ -173,7 +173,7 @@
   #zone-socialites .th-back{transform:rotate(45deg) translateZ(-6px);background:linear-gradient(145deg,#e67651,#a93c2a)}
   #zone-socialites .th-name{padding:10px 20px;border:2px solid var(--line);border-radius:999px;color:var(--ink);font-size:.72rem;white-space:nowrap;transition:color .25s,border-color .25s,background .25s}
   #zone-socialites .th-person:is(:hover,:focus-visible,.active) .th-medallion{transform:translateY(-5px);border-color:var(--amber);box-shadow:0 0 18px #ff9f0055,0 0 48px #ff9f0022}
-  #zone-socialites .th-person:is(:hover,:focus-visible,.active) .th-spinner{animation-duration:.9s}
+  #zone-socialites .th-person:is(:hover,:focus-visible,.active) .th-spinner{animation-duration:.9s !important}
   #zone-socialites .th-person:is(:hover,:focus-visible,.active) .th-name{color:var(--amber);border-color:var(--amber);background:#ff9f000d}
   #zone-socialites .th-lines{position:absolute;z-index:1;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
   #zone-socialites .th-path{fill:none;stroke:var(--amber);stroke-width:1.4;stroke-linecap:round;stroke-dasharray:5 11;opacity:.09;animation:th-draw 2.5s ease both;animation-delay:calc(.75s + var(--i)*80ms);transition:opacity .25s,stroke-width .25s;filter:drop-shadow(0 0 4px #ff9f0070)}
@@ -182,14 +182,13 @@
   @keyframes th-arrive{70%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
   @keyframes th-beat{0%,100%{transform:scaleY(1.14) scale(1)}18%{transform:scaleY(1.14) scale(1.22)}36%{transform:scaleY(1.14) scale(1)}54%{transform:scaleY(1.14) scale(1.13)}}
   @keyframes th-heart-intro{0%{opacity:0;transform:rotateY(-180deg) scale(.65)}65%{opacity:1;transform:rotateY(18deg) scale(1.08)}100%{opacity:1;transform:rotateY(0) scale(1)}}
-  @keyframes th-heart-spin{0%{transform:rotateY(0) scale(1)}45%{transform:rotateY(190deg) scale(1.13)}100%{transform:rotateY(360deg) scale(1)}}
+  @keyframes th-heart-spin{from{transform:rotateY(0deg)}to{transform:rotateY(360deg)}}
   @keyframes th-heart-float{0%,100%{transform:translateY(2px)}50%{transform:translateY(-5px)}}
   @keyframes th-draw{from{opacity:0;stroke-dashoffset:80}35%{opacity:.55}to{opacity:.09;stroke-dashoffset:0}}
   @keyframes th-flow{to{stroke-dashoffset:-32}}
   @keyframes th-twinkle{50%{transform:scale(1.17) rotate(12deg);filter:drop-shadow(0 0 10px #ff9f00aa)}}
   @keyframes th-logo-breathe{50%{transform:translateY(-4px) scale(1.025);filter:drop-shadow(0 12px 28px #0009)}}
   @media(max-width:660px){#zone-socialites .th-stage{height:460px}#zone-socialites .th-medallion{width:72px;height:72px}#zone-socialites .th-float{transform:scale(.72)}#zone-socialites .th-name{padding:7px 12px;font-size:11px}#zone-socialites .th-center img{width:125px;height:125px}}
-  @media(prefers-reduced-motion:reduce){#zone-socialites *{animation:none!important}#zone-socialites .th-person{opacity:1;transform:translate(-50%,-50%)}}
   /* the honest empty window: no stage, no panel — the message alone, as before */
   #zone-socialites.soc-empty{min-height:0;background:none;padding:0}
   #zone-socialites.soc-empty .th-stage{display:none}
@@ -908,13 +907,14 @@
     socHintDefault();
   }
 
-  // Stage motion — the spin is CSS-native (owner call 2026-10-07):
-  // .th-spinner runs the existing th-heart-spin keyframes on an infinite
-  // 3.8s loop (staggered by --i, accelerated to .9s on hover/focus/active,
-  // demo parity). No JS rotation loop — fewer engine dependencies; the
-  // site-wide reduced-motion media query stays the single motion gate. This
-  // init only wires ResizeObserver so the ellipse and edge paths re-arrange
-  // on resize.
+  // Stage motion — the spin is CSS-native and UNGATED (owner calls
+  // 2026-10-07 15:04 + 15:42): .th-spinner runs the th-heart-spin keyframes
+  // on an infinite 3.8s loop (staggered by --i, accelerated to .9s on
+  // hover/focus/active), the spinner declarations carry !important, and the
+  // section's reduced-motion kill switch is DELETED — it parked every stage
+  // animation on devices that report reduce-motion (the owner's included).
+  // No JS rotation loop at all. This init only wires ResizeObserver so the
+  // ellipse and edge paths re-arrange on resize.
   function socInitMotion(){
     if (socMotionInit) return;
     socMotionInit = true;
