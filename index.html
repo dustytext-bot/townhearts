@@ -34,6 +34,9 @@
   section{margin-top:34px}
   h2{color:var(--amber); font-size:1.05rem; font-weight:normal; letter-spacing:1px; text-transform:uppercase;
      border-bottom:1px solid var(--line); padding-bottom:8px; margin-bottom:16px}
+  .th-header{display:flex;align-items:center;gap:20px;padding-bottom:16px;margin-bottom:8px;border-bottom:1px solid var(--line)}
+  .th-header h2{margin:0;padding:0;border-bottom:none}
+  .th-sparkle{color:#ffb23c;font-size:34px;filter:drop-shadow(0 0 6px #ff9f0066);animation:th-twinkle 2.6s ease-in-out infinite}
   p.copy{color:var(--dim); font-size:.88rem; margin:8px 0; max-width:940px}
   p.copy b, p.copy code{color:var(--amber); font-weight:normal}
   .cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px}
@@ -152,9 +155,7 @@
                    color:var(--ink);
                    box-sizing:border-box;overflow:hidden;
                    padding:34px clamp(20px,5vw,54px) 42px;background:var(--bg);min-height:520px}
-  #zone-socialites .th-header{display:flex;align-items:center;gap:20px;padding-bottom:16px;border-bottom:1px solid #5c3900}
   
-  #zone-socialites .th-sparkle{color:#ffb23c;font-size:34px;filter:drop-shadow(0 0 6px #ff9f0066);animation:th-twinkle 2.6s ease-in-out infinite}
   
   #zone-socialites .th-stage{position:relative;isolation:isolate;height:510px}
   #zone-socialites .th-list{position:absolute;z-index:2;inset:0}
@@ -192,7 +193,6 @@
   /* the honest empty window: no stage, no panel — the message alone, as before */
   #zone-socialites.soc-empty{min-height:0;background:none;padding:0}
   #zone-socialites.soc-empty .th-stage{display:none}
-  #zone-socialites h2{margin:0;padding:0;border-bottom:none}
 #zone-socialites.soc-empty .th-hint{margin:8px 0 0;text-align:left;color:var(--dim);font-size:.88rem}
     /* zone dividers + compact rows */
     .more-divider{color:var(--dim);font-size:.8rem;text-align:center;padding:8px 12px;
@@ -224,7 +224,7 @@
        window tabs and in the focused view. Behavior is unchanged (search,
        resolution, did-you-mean chips, focus navigation). -->
   <section id="zone-find" aria-label="Find a muse">
-    <h2>🔍 Find a muse</h2>
+    <header class="th-header"><span class="th-sparkle" aria-hidden="true">✦</span><h2>🔍 Find a muse</h2></header>
     <div class="lookup">
       <p class="copy">Search a display name (or paste a muse id) to see that muse's strongest observed
          connections — warmth, tier, growth and the first time the pair was observed together.
@@ -241,7 +241,7 @@
 
   <!-- muse deep link (v1.2.1): ?muse=<name> — the focused view -->
   <section id="zone-focus" aria-label="Focused on a muse" style="display:none">
-    <h2 id="focus-title"></h2>
+    <header class="th-header"><span class="th-sparkle" aria-hidden="true">✦</span><h2 id="focus-title"></h2></header>
     <div class="focus-head">
       <button id="focus-clear" type="button">clear focus</button>
     </div>
@@ -323,7 +323,7 @@
   <p class="copy zones-framing" id="zones-framing">The Socialites already have the spotlight. These tables make room for the rest of the town.</p>
 
   <section id="zone-growing" aria-label="Connections growing now">
-    <h2>⚡ Connections growing now</h2>
+    <header class="th-header"><span class="th-sparkle" aria-hidden="true">✦</span><h2>⚡ Connections growing now</h2></header>
     <div class="status" id="status" aria-live="polite">loading town read…</div>
     <p class="copy" id="growing-note" style="display:none"></p>
     <div class="cards" id="cards"></div>
@@ -336,7 +336,7 @@
   </section>
 
   <section id="zone-sparks" aria-label="New sparks">
-    <h2>🌱 New sparks</h2>
+    <header class="th-header"><span class="th-sparkle" aria-hidden="true">✦</span><h2>🌱 New sparks</h2></header>
     <p class="copy">pairs first observed together within the last 30 days — newest first. First meetings need a first shared public place.</p>
     <div class="cards" id="sparks"></div>
     <div class="more-controls" id="sparks-more" style="display:none">
@@ -348,7 +348,7 @@
   </section>
 
   <section id="zone-bonds" aria-label="Complete relationship explorer">
-    <h2 id="bonds-title">📊 All-time relationships</h2>
+    <header class="th-header"><span class="th-sparkle" aria-hidden="true">✦</span><h2 id="bonds-title">📊 All-time relationships</h2></header>
     <p class="copy" id="grid-note"></p>
     <div class="cards" id="bonds-cards" style="display:none"></div>
     <div class="table-scroll">
@@ -365,7 +365,7 @@
   </section>
 
   <section>
-    <h2>🔎 Look up any pair</h2>
+    <header class="th-header"><span class="th-sparkle" aria-hidden="true">✦</span><h2>🔎 Look up any pair</h2></header>
     <div class="lookup">
       <p class="copy">Enter two muse ids (or exact display names) to see why two muses are connected. Pair identity
          is the two muse ids sorted and pipe-joined: <code id="pairkey-demo"></code></p>
