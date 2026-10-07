@@ -1,9 +1,4 @@
-DRAFT-PENDING-OWNER-CONFIRM — this license text is staged for the TownHearts
-hybrid migration (phase C will present it for the owner's confirmation before
-the public repository goes live). Do not treat it as final until that
-confirmation lands. The production collector / operational tooling is
-proprietary and is NOT covered by this file (it is not part of this
-repository at all).
+MIT License
 
 MIT License (draft for the TownHearts site/client code)
 

@@ -1,11 +1,7 @@
-DRAFT-PENDING-OWNER-CONFIRM — this data-license text is staged for the
-TownHearts hybrid migration (phase C will present it for the owner's
-confirmation before the public repository goes live). Do not treat it as
-final until that confirmation lands.
+TownHearts Published Data License
+TownHearts Published Data License
 
-TownHearts Published Data License (draft — CC BY 4.0 attribution terms)
-
-Attribution 4.0 International (CC BY 4.0) — draft application to the
+Attribution 4.0 International (CC BY-NC 4.0) — draft application to the
 published aggregated data files in this repository (data/*.json, including
 data/graph.schema.json).
 
