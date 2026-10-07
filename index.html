@@ -149,14 +149,13 @@
        pub-1.2 note: the honest empty window strips the stage panel — the
        warming-up message alone, as before the stage existed. -->
   #zone-socialites{--amber:#ffa20a;--medal:#392406;
-                   color:var(--text);
+                   color:var(--ink);
                    box-sizing:border-box;overflow:hidden;
                    padding:34px clamp(20px,5vw,54px) 42px;background:var(--bg);min-height:520px}
   #zone-socialites .th-header{display:flex;align-items:center;gap:20px;padding-bottom:22px;border-bottom:1px solid #5c3900}
-  #zone-socialites h2{margin:0;padding-bottom:0;border-bottom:none;margin-bottom:0;color:var(--amber);
-                      font-weight:400;letter-spacing:.08em;text-transform:none}
+  
   #zone-socialites .th-sparkle{color:#ffb23c;font-size:34px;filter:drop-shadow(0 0 6px #ff9f0066);animation:th-twinkle 2.6s ease-in-out infinite}
-  #zone-socialites .th-copy{max-width:940px;margin:28px 0 38px;font-size:13px;line-height:1.5;}
+  
   #zone-socialites .th-stage{position:relative;isolation:isolate;height:510px}
   #zone-socialites .th-list{position:absolute;z-index:2;inset:0}
   #zone-socialites .th-person{position:absolute;left:var(--x,50%);top:var(--y,50%);display:grid;justify-items:center;gap:18px;padding:0;border:0;background:transparent;color:inherit;font-family:inherit;opacity:0;transform:translate(-50%,-50%) scale(.82);animation:th-arrive .65s cubic-bezier(.22,1,.36,1) forwards;animation-delay:calc(var(--i,0)*110ms)}
@@ -172,14 +171,14 @@
   #zone-socialites .th-front{transform:rotate(45deg) translateZ(6px);background:radial-gradient(circle at 26% 24%,#ffe0c2 0 7%,transparent 8%),linear-gradient(145deg,#ffa67c,#ee744d 52%,#c84b34)}
   #zone-socialites .th-mid{transform:rotate(45deg) translateZ(0);background:#742a1d}
   #zone-socialites .th-back{transform:rotate(45deg) translateZ(-6px);background:linear-gradient(145deg,#e67651,#a93c2a)}
-  #zone-socialites .th-name{padding:10px 20px;border:2px solid var(--line);border-radius:999px;color:var(--ink);font-size:12px;white-space:nowrap;transition:color .25s,border-color .25s,background .25s}
+  #zone-socialites .th-name{padding:10px 20px;border:2px solid var(--line);border-radius:999px;color:var(--ink);font-size:.72rem;white-space:nowrap;transition:color .25s,border-color .25s,background .25s}
   #zone-socialites .th-person:is(:hover,:focus-visible,.active) .th-medallion{transform:translateY(-5px);border-color:var(--amber);box-shadow:0 0 18px #ff9f0055,0 0 48px #ff9f0022}
   #zone-socialites .th-person:is(:hover,:focus-visible,.active) .th-spinner{animation-duration:.9s}
   #zone-socialites .th-person:is(:hover,:focus-visible,.active) .th-name{color:var(--amber);border-color:var(--amber);background:#ff9f000d}
   #zone-socialites .th-lines{position:absolute;z-index:1;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
   #zone-socialites .th-path{fill:none;stroke:var(--amber);stroke-width:1.4;stroke-linecap:round;stroke-dasharray:5 11;opacity:.09;animation:th-draw 2.5s ease both;animation-delay:calc(.75s + var(--i)*80ms);transition:opacity .25s,stroke-width .25s;filter:drop-shadow(0 0 4px #ff9f0070)}
   #zone-socialites .th-path.active{opacity:.8;stroke-width:2.4;animation:th-flow 1.05s linear infinite}
-  #zone-socialites .th-hint{margin:14px 0 0;text-align:center;color:var(--dim);font-size:12px}
+  
   @keyframes th-arrive{70%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
   @keyframes th-beat{0%,100%{transform:scaleY(1.14) scale(1)}18%{transform:scaleY(1.14) scale(1.22)}36%{transform:scaleY(1.14) scale(1)}54%{transform:scaleY(1.14) scale(1.13)}}
   @keyframes th-heart-intro{0%{opacity:0;transform:rotateY(-180deg) scale(.65)}65%{opacity:1;transform:rotateY(18deg) scale(1.08)}100%{opacity:1;transform:rotateY(0) scale(1)}}
@@ -189,7 +188,7 @@
   @keyframes th-flow{to{stroke-dashoffset:-32}}
   @keyframes th-twinkle{50%{transform:scale(1.17) rotate(12deg);filter:drop-shadow(0 0 10px #ff9f00aa)}}
   @keyframes th-logo-breathe{50%{transform:translateY(-4px) scale(1.025);filter:drop-shadow(0 12px 28px #0009)}}
-  @media(max-width:660px){#zone-socialites .th-stage{height:460px}#zone-socialites .th-medallion{width:72px;height:72px}#zone-socialites .th-float{transform:scale(.72)}#zone-socialites .th-name{padding:7px 12px;font-size:11px}#zone-socialites .th-copy{margin-bottom:24px}#zone-socialites .th-center img{width:125px;height:125px}}
+  @media(max-width:660px){#zone-socialites .th-stage{height:460px}#zone-socialites .th-medallion{width:72px;height:72px}#zone-socialites .th-float{transform:scale(.72)}#zone-socialites .th-name{padding:7px 12px;font-size:11px}#zone-socialites .th-center img{width:125px;height:125px}}
   @media(prefers-reduced-motion:reduce){#zone-socialites *{animation:none!important}#zone-socialites .th-person{opacity:1;transform:translate(-50%,-50%)}}
   /* the honest empty window: no stage, no panel — the message alone, as before */
   #zone-socialites.soc-empty{min-height:0;background:none;padding:0}
@@ -312,13 +311,13 @@
       <span class="th-sparkle" aria-hidden="true">✦</span>
       <h2 id="th-title">THE SOCIALITES</h2>
     </header>
-    <p class="th-copy">The Socialites of the Town — the town's highly connected regulars. They're naturally in the middle of everything, so they get their own stage while the tables below make room for everyone else's connections.</p>
+    <p class="copy">The Socialites of the Town — the town's highly connected regulars. They're naturally in the middle of everything, so they get their own stage while the tables below make room for everyone else's connections.</p>
     <div class="th-stage">
       <svg class="th-lines" id="th-lines" aria-hidden="true"></svg>
       <div class="th-center"><img src="logo.png" alt="TownHearts plush logo"></div>
       <div class="th-list" id="soc-stage"></div>
     </div>
-    <p class="th-hint" id="soc-status" aria-live="polite">Hover, focus, or tap a Socialite.</p>
+    <p class="afoot th-hint" id="soc-status" aria-live="polite">Hover, focus, or tap a Socialite.</p>
   </section>
 
   <p class="copy zones-framing" id="zones-framing">The Socialites already have the spotlight. These tables make room for the rest of the town.</p>
