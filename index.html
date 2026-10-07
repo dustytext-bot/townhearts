@@ -140,22 +140,61 @@
     /* v1.2.14 (audit P2): the shareable-profile link on form resolutions */
     a.m-share{color:var(--amber);text-decoration:underline}
     a.m-share:hover{color:var(--bond)}
-    /* The Socialites stage (v1.2) — a dancing group, no numbers, no ranks */
-    .soc-stage{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;min-height:70px;align-items:flex-end}
-    .soc-slot{display:flex;flex-direction:column;align-items:center}
-    .soc-bubble{width:56px;height:56px;border-radius:50%;background:var(--amber-soft);
-                border:1px solid var(--line);display:flex;align-items:center;justify-content:center;
-                font-size:1.5rem;color:var(--amber);overflow:hidden;
-                animation:thdance 2.6s ease-in-out infinite}
-    .soc-bubble img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
-    .soc-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
-    .soc-chip{background:var(--panel);border:1px solid var(--line);border-radius:999px;
-              padding:4px 12px;color:var(--ink);font-size:.8rem}
-    @keyframes thdance{
-      0%,100%{transform:translateY(0) rotate(-3deg)}
-      50%{transform:translateY(-7px) rotate(3deg)}
-    }
-    @media (prefers-reduced-motion: reduce){.soc-bubble{animation:none}}
+  <!-- pub-1.2: THE SOCIALITES stage — the owner's 3D spinning-heart demo,
+       integrated. Scoped under the section id; the demo's palette/typography
+       is kept verbatim (the section keeps its own dark stage-panel look).
+       The medallions are populated by the ACTIVE window's roll; the dashed
+       amber lines are the REAL edges between them; the center wears the
+       site's own logo (relative path) instead of the demo's base64 blob.
+       pub-1.2 note: the honest empty window strips the stage panel — the
+       warming-up message alone, as before the stage existed. -->
+  #zone-socialites{--bg:#130f0c;--text:#d1ae86;--amber:#ffa20a;--line:#754900;--medal:#392406;
+                   font-family:"Courier New",monospace;color:var(--text);
+                   box-sizing:border-box;overflow:hidden;
+                   padding:34px clamp(20px,5vw,54px) 42px;background:var(--bg);min-height:520px}
+  #zone-socialites .th-header{display:flex;align-items:center;gap:20px;padding-bottom:22px;border-bottom:1px solid #5c3900}
+  #zone-socialites h2{margin:0;padding-bottom:0;border-bottom:none;margin-bottom:0;color:var(--amber);
+                      font-size:clamp(23px,4vw,35px);font-weight:400;letter-spacing:.08em;text-transform:none}
+  #zone-socialites .th-sparkle{color:#ffb23c;font-size:34px;filter:drop-shadow(0 0 6px #ff9f0066);animation:th-twinkle 2.6s ease-in-out infinite}
+  #zone-socialites .th-copy{max-width:940px;margin:28px 0 38px;font-size:clamp(16px,2.3vw,23px);line-height:1.58}
+  #zone-socialites .th-stage{position:relative;isolation:isolate;height:510px}
+  #zone-socialites .th-list{position:absolute;z-index:2;inset:0}
+  #zone-socialites .th-person{position:absolute;left:var(--x,50%);top:var(--y,50%);display:grid;justify-items:center;gap:18px;padding:0;border:0;background:transparent;color:inherit;opacity:0;transform:translate(-50%,-50%) scale(.82);animation:th-arrive .65s cubic-bezier(.22,1,.36,1) forwards;animation-delay:calc(var(--i,0)*110ms)}
+  #zone-socialites .th-center{position:absolute;z-index:3;left:50%;top:50%;display:grid;place-items:center;transform:translate(-50%,-50%);pointer-events:none}
+  #zone-socialites .th-center img{display:block;width:190px;height:190px;object-fit:contain;filter:drop-shadow(0 8px 22px #0008);animation:th-logo-breathe 3.6s ease-in-out infinite}
+  #zone-socialites .th-medallion{display:grid;width:105px;height:105px;place-items:center;border:2px solid var(--line);border-radius:50%;background:radial-gradient(circle at 50% 42%,#ff9f001c,transparent 64%),var(--medal);perspective:520px;transition:transform .25s,border-color .25s,box-shadow .25s}
+  #zone-socialites .th-float{position:relative;display:block;width:52px;height:48px;animation:th-heart-float 3.2s ease-in-out infinite;animation-delay:calc(var(--i)*-370ms)}
+  #zone-socialites .th-spinner{position:absolute;inset:0;display:block;transform-style:preserve-3d;animation:none!important;will-change:transform}
+  #zone-socialites .th-heart{position:absolute;left:10px;top:9px;width:33px;height:33px;border-radius:5px;transform-style:preserve-3d;transform:rotate(45deg) translateZ(0);background:#6b281b;box-shadow:4px 5px 9px #210b0759}
+  #zone-socialites .th-heart:before,#zone-socialites .th-heart:after{position:absolute;width:33px;height:33px;content:"";border-radius:50%;background:inherit}
+  #zone-socialites .th-heart:before{left:-17px;top:0}
+  #zone-socialites .th-heart:after{left:0;top:-17px}
+  #zone-socialites .th-front{transform:rotate(45deg) translateZ(6px);background:radial-gradient(circle at 26% 24%,#ffe0c2 0 7%,transparent 8%),linear-gradient(145deg,#ffa67c,#ee744d 52%,#c84b34)}
+  #zone-socialites .th-mid{transform:rotate(45deg) translateZ(0);background:#742a1d}
+  #zone-socialites .th-back{transform:rotate(45deg) translateZ(-6px);background:linear-gradient(145deg,#e67651,#a93c2a)}
+  #zone-socialites .th-name{padding:10px 20px;border:2px solid #50340d;border-radius:999px;color:#fff6e8;font-size:17px;white-space:nowrap;transition:color .25s,border-color .25s,background .25s}
+  #zone-socialites .th-person:is(:hover,:focus-visible,.active) .th-medallion{transform:translateY(-5px);border-color:var(--amber);box-shadow:0 0 18px #ff9f0055,0 0 48px #ff9f0022}
+  #zone-socialites .th-person:is(:hover,:focus-visible,.active) .th-spinner{animation-duration:.9s}
+  #zone-socialites .th-person:is(:hover,:focus-visible,.active) .th-name{color:var(--amber);border-color:var(--amber);background:#ff9f000d}
+  #zone-socialites .th-lines{position:absolute;z-index:1;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
+  #zone-socialites .th-path{fill:none;stroke:var(--amber);stroke-width:1.4;stroke-linecap:round;stroke-dasharray:5 11;opacity:.09;animation:th-draw 2.5s ease both;animation-delay:calc(.75s + var(--i)*80ms);transition:opacity .25s,stroke-width .25s;filter:drop-shadow(0 0 4px #ff9f0070)}
+  #zone-socialites .th-path.active{opacity:.8;stroke-width:2.4;animation:th-flow 1.05s linear infinite}
+  #zone-socialites .th-hint{margin:28px 0 0;text-align:center;color:#9d7b58;font-size:14px}
+  @keyframes th-arrive{70%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}100%{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+  @keyframes th-beat{0%,100%{transform:scaleY(1.14) scale(1)}18%{transform:scaleY(1.14) scale(1.22)}36%{transform:scaleY(1.14) scale(1)}54%{transform:scaleY(1.14) scale(1.13)}}
+  @keyframes th-heart-intro{0%{opacity:0;transform:rotateY(-180deg) scale(.65)}65%{opacity:1;transform:rotateY(18deg) scale(1.08)}100%{opacity:1;transform:rotateY(0) scale(1)}}
+  @keyframes th-heart-spin{0%{transform:rotateY(0) scale(1)}45%{transform:rotateY(190deg) scale(1.13)}100%{transform:rotateY(360deg) scale(1)}}
+  @keyframes th-heart-float{0%,100%{transform:translateY(2px)}50%{transform:translateY(-5px)}}
+  @keyframes th-draw{from{opacity:0;stroke-dashoffset:80}35%{opacity:.55}to{opacity:.09;stroke-dashoffset:0}}
+  @keyframes th-flow{to{stroke-dashoffset:-32}}
+  @keyframes th-twinkle{50%{transform:scale(1.17) rotate(12deg);filter:drop-shadow(0 0 10px #ff9f00aa)}}
+  @keyframes th-logo-breathe{50%{transform:translateY(-4px) scale(1.025);filter:drop-shadow(0 12px 28px #0009)}}
+  @media(max-width:660px){#zone-socialites .th-stage{height:460px}#zone-socialites .th-medallion{width:72px;height:72px}#zone-socialites .th-float{transform:scale(.72)}#zone-socialites .th-name{padding:7px 12px;font-size:13px}#zone-socialites .th-copy{margin-bottom:24px}#zone-socialites .th-center img{width:125px;height:125px}}
+  @media(prefers-reduced-motion:reduce){#zone-socialites *{animation:none!important}#zone-socialites .th-person{opacity:1;transform:translate(-50%,-50%)}}
+  /* the honest empty window: no stage, no panel — the message alone, as before */
+  #zone-socialites.soc-empty{min-height:0;background:none;padding:0}
+  #zone-socialites.soc-empty .th-stage{display:none}
+  #zone-socialites.soc-empty .th-hint{margin:8px 0 0;text-align:left;color:var(--dim);font-size:.88rem}
     /* zone dividers + compact rows */
     .more-divider{color:var(--dim);font-size:.8rem;text-align:center;padding:8px 12px;
                   border:1px dashed var(--line);border-radius:8px;margin:14px 0}
@@ -264,11 +303,22 @@
   <!-- ============ RESULTS AREA: five zones (v1.2) ============ -->
 
   <section id="zone-socialites" aria-label="The Socialites of the Town">
-    <h2>✨ The Socialites</h2>
-    <p class="copy">The Socialites of the Town — the town's highly connected regulars. They're naturally in the middle of everything, so they get their own stage while the tables below make room for everyone else's connections.</p>
-    <div class="soc-stage" id="soc-stage"></div>
-    <div class="soc-chips" id="soc-chips"></div>
-    <div class="status" id="soc-status" aria-live="polite"></div>
+    <!-- pub-1.2: the owner's 3D spinning-heart stage. The medallions are the
+         ACTIVE window's own roll (rebuilt on every window render — each data
+         file carries its own); the dashed amber paths are the REAL edges
+         between the roll muses; the center wears the site's logo.png. Names
+         ship as text nodes + attributes only — no HTML-string APIs. -->
+    <header class="th-header">
+      <span class="th-sparkle" aria-hidden="true">✦</span>
+      <h2 id="th-title">THE SOCIALITES</h2>
+    </header>
+    <p class="th-copy">The Socialites of the Town — the town's highly connected regulars. They're naturally in the middle of everything, so they get their own stage while the tables below make room for everyone else's connections.</p>
+    <div class="th-stage">
+      <svg class="th-lines" id="th-lines" aria-hidden="true"></svg>
+      <div class="th-center"><img src="logo.png" alt="TownHearts plush logo"></div>
+      <div class="th-list" id="soc-stage"></div>
+    </div>
+    <p class="th-hint" id="soc-status" aria-live="polite">Hover, focus, or tap a Socialite.</p>
   </section>
 
   <p class="copy zones-framing" id="zones-framing">The Socialites already have the spotlight. These tables make room for the rest of the town.</p>
@@ -660,12 +710,185 @@
       total > 12 ? " — the tracker's entire history is still young, so nearly every pair's first meeting lands here" : "");
   }
 
-  // zone 1: THE SOCIALITES — a dancing group; no numbers, no ranks
+  // zone 1: THE SOCIALITES — the 3D stage (pub-1.2, owner call "jazz up the
+  // socialites section"): the owner's spinning-heart demo as the section's
+  // stage. DYNAMIC like every zone: buildStage() runs on EVERY window render
+  // against the ACTIVE window's own meta.socialites roll (each data file
+  // carries its own roll) and THIS graph's edges — the medallions are the
+  // roll, one dashed path per REAL edge between two roll muses (zero
+  // inter-roll edges = zero lines, honest). An empty roll builds nothing —
+  // the warming-up message (or the full-window qualification copy) shows
+  // exactly as before. Rendering is text-node/attribute-based only — no
+  // HTML-string API anywhere — so roll names stay XSS-inert like every other
+  // data string.
+  var socSection = $("zone-socialites"), socStage = $("soc-stage"),
+      socSvg = $("th-lines"), socHint = $("soc-status");
+  var socPeople = [];        // display (shuffled) order: {node, medal, name, id}
+  var socLinks = {};         // pairKey -> {a, b, pair, el} — the inter-roll edges on stage
+  var socOrder = [];         // pair keys in draw order (deterministic)
+  var socSpinners = [];      // rebuilt per window; the rAF loop reads the live array
+  var socMotionInit = false, socReduced = false, socHasRaf = false,
+      socVisible = true, socRafId = 0, socStartTs = 0;
+
+  function socClass(node, cls, on){          // classList-free toggle — works on
+    // HTML buttons AND svg paths (className is an SVGAnimatedString there)
+    var cur = (typeof node.getAttribute === "function") ?
+              (node.getAttribute("class") || "") : String(node.className || "");
+    var parts = cur.split(/\s+/).filter(Boolean), at = parts.indexOf(cls);
+    if (on && at < 0) parts.push(cls); else if (!on && at >= 0) parts.splice(at, 1);
+    var joined = parts.join(" ");
+    if (typeof node.setAttribute === "function") node.setAttribute("class", joined);
+    else node.className = joined;
+  }
+  function socHasClass(node, cls){
+    var cur = (typeof node.getAttribute === "function") ?
+              (node.getAttribute("class") || "") : String(node.className || "");
+    return cur.split(/\s+/).indexOf(cls) >= 0;
+  }
+  function socDisplayName(entry){
+    var id = entry ? entry.muse_id : null;
+    return String((roster && id && roster[id]) || (entry && entry.name) || (id == null ? "" : id));
+  }
+  function socCenter(p){
+    // the medallion's box center relative to the stage — layout info only;
+    // unavailable in the test shims → the axes (0,0), which still draws paths
+    try{
+      var a = (p && p.medal && typeof p.medal.getBoundingClientRect === "function") ?
+              p.medal.getBoundingClientRect() : null,
+          b = (socStage && typeof socStage.getBoundingClientRect === "function") ?
+              socStage.getBoundingClientRect() : null;
+      if (a && b) return { x: (a.left - b.left) + a.width / 2, y: (a.top - b.top) + a.height / 2 };
+    }catch(e){}
+    return { x: 0, y: 0 };
+  }
+  function socArrange(){                       // the ellipse (demo math, kept)
+    if (!socStage || !socPeople.length) return;
+    var w = socStage.clientWidth, h = socStage.clientHeight,
+        okW = (typeof w === "number" && isFinite(w) && w > 0),
+        okH = (typeof h === "number" && isFinite(h) && h > 0);
+    if (!okW) w = Math.max(320, (typeof window === "object" && window && window.innerWidth) || 900);
+    if (!okH) h = 510;
+    var rx = Math.max(92, Math.min(w * .37, w / 2 - 74)),
+        ry = Math.min(174, h * .34), cx = w / 2, cy = h / 2;
+    socPeople.forEach(function(p, i){
+      var angle = -Math.PI / 2 + i * (Math.PI * 2 / socPeople.length);
+      p.node.style.setProperty("--x", (cx + Math.cos(angle) * rx) + "px");
+      p.node.style.setProperty("--y", (cy + Math.sin(angle) * ry) + "px");
+    });
+  }
+  function socDraw(){                          // (re)place the paths — rebuild/resize safe
+    if (!socSvg) return;
+    clear(socSvg);
+    if (!socPeople.length) return;
+    socArrange();
+    var w = socStage.clientWidth, h = socStage.clientHeight,
+        okW = (typeof w === "number" && isFinite(w) && w > 0),
+        okH = (typeof h === "number" && isFinite(h) && h > 0);
+    if (!okW) w = 900;
+    if (!okH) h = 510;
+    socSvg.setAttribute("viewBox", "0 0 " + w + " " + h);
+    socOrder.forEach(function(pairKey, i){
+      var l = socLinks[pairKey],
+          s = socCenter(socPeople[l.a]), e = socCenter(socPeople[l.b]);
+      if (!l.el){                              // created once per rebuild
+        l.el = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        l.el.setAttribute("class", "th-path");
+        l.el.setAttribute("data-a", String(l.a));
+        l.el.setAttribute("data-b", String(l.b));
+        l.el.setAttribute("data-pair", pairKey);
+        l.el.style.setProperty("--i", i);
+        socSvg.appendChild(l.el);
+      }
+      l.el.setAttribute("d", "M " + s.x + " " + s.y + " L " + e.x + " " + e.y);
+    });
+  }
+  function socActivate(i){
+    var cnt = 0;
+    socPeople.forEach(function(p, n){ socClass(p.node, "active", n === i); });
+    socOrder.forEach(function(pk){
+      var l = socLinks[pk], on = (l.a === i || l.b === i);
+      if (on) cnt++;
+      socClass(l.el, "active", on);
+    });
+    clear(socHint);
+    txt(socHint, "Showing " + socPeople[i].name + "'s connections" +
+      (cnt ? " (" + cnt + " on this stage)" : ""));
+  }
+  function socClearActive(){
+    socPeople.forEach(function(p){ socClass(p.node, "active", false); });
+    socOrder.forEach(function(pk){ socClass(socLinks[pk].el, "active", false); });
+    socHintDefault();
+  }
+  function socHintDefault(){
+    clear(socHint);
+    txt(socHint, "Hover, focus, or tap a Socialite.");
+  }
+  function socHintMsg(msg){
+    clear(socHint);
+    txt(socHint, msg);
+  }
+
+  function buildStage(roll, edges){
+    if (socSection) socClass(socSection, "soc-empty", false);
+    clear(socStage);
+    socPeople = []; socLinks = {}; socOrder = []; socSpinners = [];
+    var order = (Z && typeof Z.shuffle === "function") ? Z.shuffle(roll) : roll;
+    var at = {};                                  // muse_id -> display index
+    order.forEach(function(entry, i){
+      var name = socDisplayName(entry), id = entry ? entry.muse_id : null;
+      var btn = el("button", "th-person cursor-interaction", socStage);
+      btn.setAttribute("type", "button");
+      btn.setAttribute("data-name", name);        // demo parity — data is data, never markup
+      if (id != null) btn.setAttribute("data-muse-id", String(id));
+      btn.style.setProperty("--i", i);            // the arrival/float stagger
+      var medal = el("span", "th-medallion", btn),
+          flt = el("span", "th-float", medal),
+          spin = el("span", "th-spinner", flt);
+      el("i", "th-heart th-front", spin);
+      el("i", "th-heart th-mid", spin);
+      el("i", "th-heart th-back", spin);
+      txt(el("span", "th-name", btn), name);      // the pill — one text node, never markup
+      if (id != null) at[id] = i;
+      socPeople.push({ node: btn, medal: medal, name: name, id: id });
+      socSpinners.push(spin);
+    });
+    var seen = {};                                // one path per inter-roll pair
+    (Array.isArray(edges) ? edges : []).forEach(function(e){
+      if (!e) return;
+      var ia = (e.a != null && at[e.a] !== undefined) ? at[e.a] : null,
+          ib = (e.b != null && at[e.b] !== undefined) ? at[e.b] : null;
+      if (ia === null || ib === null) return;     // both ends must be on this stage
+      var pk = [e.a, e.b].sort().join("|");       // the canonical pairKey
+      if (seen[pk]) return;
+      seen[pk] = true;
+      socOrder.push(pk);
+      socLinks[pk] = { a: Math.min(ia, ib), b: Math.max(ia, ib), pair: pk, el: null };
+    });
+    socOrder.sort();                              // deterministic draw order
+    socDraw();
+    socPeople.forEach(function(p, i){
+      p.node.addEventListener("mouseenter", function(){ socActivate(i); });
+      p.node.addEventListener("mouseleave", socClearActive);
+      p.node.addEventListener("focus", function(){ socActivate(i); });
+      p.node.addEventListener("blur", socClearActive);
+      p.node.addEventListener("click", function(){
+        if (socHasClass(p.node, "active")) socClearActive(); else socActivate(i);
+      });
+    });
+    socSpinStart();                               // (re)start the spinners if motion is on
+  }
+
+  function socEmpty(){                  // the stage not built: badge + fresh state
+    if (socSection) socClass(socSection, "soc-empty", true);
+    clear(socStage); clear(socSvg);
+    socPeople = []; socLinks = {}; socOrder = []; socSpinners = [];
+    socSpinStop();
+  }
+
   function renderSocialites(){
-    var stage = $("soc-stage"), chips = $("soc-chips"), st = $("soc-status");
-    clear(stage); clear(chips); clear(st);
     var roll = meta && meta.socialites;
     if (!roll || !roll.length){
+      socEmpty();
       // per-window rule (v1.2.3): the active window's own data decides. The
       // 24h window omits the active-days floor (a 24-hour span covers at
       // most 2 calendar dates); the default lifetime view rolls on 30d.
@@ -674,7 +897,7 @@
       // now shows this compact inactive-stage message instead (never ranks,
       // never invented entries); the full windows keep their own rule copy.
       if (showcaseMode()){
-        txt(st, "The Socialites stage is still warming up. Qualification requires broad public activity across multiple muses and places.");
+        socHintMsg("The Socialites stage is still warming up. Qualification requires broad public activity across multiple muses and places.");
         return;
       }
       var span = (meta && meta.socialites_window) || "30d";
@@ -682,27 +905,64 @@
       var floors = span === "24h"
         ? "(6+ distinct muses, 3+ public places within " + spanTxt + ", no single muse above 40%)"
         : "(6+ distinct muses, 3+ active days, 3+ public places within " + spanTxt + ", no single muse above 40%)";
-      txt(st, "no Socialites in this window — the qualification needs breadth that window hasn't shown yet " + floors +
+      socHintMsg("no Socialites in this window — the qualification needs breadth that window hasn't shown yet " + floors +
         ". A role, not a tier — the town takes time.");
       return;
     }
-    var order = Z ? Z.shuffle(roll) : roll;   // randomized order per page load (display only)
-    order.forEach(function(entry, i){
-      var id = entry.muse_id;
-      var slot = el("div", "soc-slot", stage);
-      var bubble = el("div", "soc-bubble", slot);
-      bubble.style.animationDelay = (i * 0.22).toFixed(2) + "s";
-      var url = avatars && avatars[id];
-      if (url){
-        var img = el("img", null, bubble);
-        img.src = String(url);
-        img.alt = "";
-      } else {
-        txt(bubble, "♥");                  // the heart-dance glyph
-      }
-      var chip = el("span", "soc-chip", chips);
-      txt(chip, (roster && roster[id]) || entry.name || id);
+    buildStage(roll, curEdges);          // THIS window's roll + the loaded graph's edges
+    socHintDefault();
+  }
+
+  // Stage motion — ONE rAF loop drives the roll's spinners (the CSS keyframe
+  // spinner is intentionally off; the loop keeps the hearts turning and only
+  // accelerates on hover/focus/active, demo parity). Hard gates:
+  //   prefers-reduced-motion — the loop NEVER runs (transforms stay static);
+  //   no rAF (the test shims / very old engines) — the loop never runs;
+  //   off-viewport — paused via IntersectionObserver (cheap battery win);
+  //   size changes — ResizeObserver re-arranges the ellipse.
+  function socInitMotion(){
+    if (socMotionInit) return;
+    socMotionInit = true;
+    try {
+      socReduced = !!(typeof matchMedia === "function" && matchMedia &&
+                      matchMedia("(prefers-reduced-motion: reduce)").matches);
+    } catch (e) { socReduced = false; }
+    socHasRaf = (typeof requestAnimationFrame === "function") &&
+                (typeof cancelAnimationFrame === "function");
+    if (typeof IntersectionObserver === "function"){
+      try {
+        new IntersectionObserver(function(entries){
+          socVisible = entries.some(function(en){ return !!en.isIntersecting; });
+          if (socVisible) socSpinStart(); else socSpinStop();
+        }).observe(socStage);
+      } catch (e) {}
+    }
+    if (typeof ResizeObserver === "function"){
+      try { new ResizeObserver(function(){ socDraw(); }).observe(socStage); } catch (e) {}
+    }
+  }
+  function socSpinStart(){
+    if (socRafId || !socHasRaf || socReduced || !socVisible || !socSpinners.length) return;
+    socStartTs = (typeof performance === "object" && performance && performance.now) ? performance.now() : 0;
+    socRafId = requestAnimationFrame(socFrame);
+  }
+  function socSpinStop(){
+    if (socRafId){ cancelAnimationFrame(socRafId); socRafId = 0; }
+  }
+  function socFrame(now){
+    socRafId = 0;
+    if (!socVisible) return;                        // paused off-viewport
+    var elapsed = now - socStartTs, deg = null;
+    socSpinners.forEach(function(spinner, index){
+      var fast = false;
+      try {
+        var owner = (typeof spinner.closest === "function") ? spinner.closest(".th-person") : null;
+        fast = !!(owner && typeof owner.matches === "function" && owner.matches(":hover,:focus-visible,.active"));
+      } catch (e) { fast = false; }
+      deg = ((elapsed * (fast ? 0.36 : 0.095) + index * 47) % 360);
+      spinner.style.transform = "rotateY(" + deg + "deg)";
     });
+    socRafId = requestAnimationFrame(socFrame);
   }
 
   // ================= v1.2.5 + v1.2.14: the default page is HIGHLIGHTS ======
@@ -841,7 +1101,7 @@
     }
   }
 
-  var meta = null, roster = null, index = null, indexNames = null, curEdges = [], avatars = null, socialiteIds = [];
+  var meta = null, roster = null, index = null, indexNames = null, curEdges = [], socialiteIds = [];
   // v1.2.14 (audit P0): the hidden tabClicked mode is GONE — the curated
   // showcase is the explicit HIGHLIGHTS tab (selected on load); LIFETIME,
   // 30d, 7d and 24h render the complete view under their own headings; and
@@ -1130,15 +1390,14 @@
     currentGraph = g; currentWin = win; currentErr = err;
 
     if (!g){  // missing/unreadable window file — honest empty state, never fake data
-      meta = null; roster = null; index = null; indexNames = null; curEdges = []; avatars = null; socialiteIds = [];
+      meta = null; roster = null; index = null; indexNames = null; curEdges = []; socialiteIds = [];
       clearZones();
       // v1.2.14 (audit): a failed/missing window load must not retain old
       // stale/partial warnings — clear both; the load error itself shows in
       // #status below.
       clearBanners();
-      clear($("soc-stage")); clear($("soc-chips"));
-      var soc = $("soc-status"); clear(soc);
-      txt(soc, "no socialite data in this view — the data file could not be loaded.");
+      socEmpty();
+      socHintMsg("no socialite data in this view — the data file could not be loaded.");
       st.className = "status"; clear(st);
       txt(st, "no observations in this window yet — " + win.file + " could not be loaded (" +
         (err && err.message ? err.message : "missing") + ")");
@@ -1152,7 +1411,6 @@
     roster = g.muses || {};
     index = g.index || {};
     indexNames = g.index_names || {};
-    avatars = g.muse_avatars || null;
     curEdges = (g.edges || []).slice().sort(function(a, b){ return b.warmth - a.warmth || (a.pair < b.pair ? -1 : 1); });
     socialiteIds = Z ? Z.socialiteIds(meta.socialites) : [];
 
@@ -1201,6 +1459,7 @@
   }
 
   buildTabs();
+  socInitMotion();                   // the stage's motion gates (rAF/IO/RO — once)
   loadWindow(WINDOWS[0]);            // HIGHLIGHTS is the default (selected) view
 
   // v1.2.14: the progressive-disclosure buttons are STATIC elements — wire

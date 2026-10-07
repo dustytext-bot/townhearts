@@ -422,7 +422,7 @@ def test_site_structure_and_identity_preserved():
         'id="zone-bonds"')]
     assert order == sorted(order)
     for needle in ('key: "highlights", label: "HIGHLIGHTS"',
-                   "thdance", "prefers-reduced-motion", "soc-bubble",
+                   "th-medallion", "th-spinner", "th-heart th-front", "prefers-reduced-motion",
                    "Audited in public.",
                    "Warmth = \u03a3 (2 \u00f7 (group size \u2212 1)) over shared observations",
                    "best case: 15 two-muse observations",
@@ -433,6 +433,58 @@ def test_site_structure_and_identity_preserved():
     assert "data/schema.sql" not in html
     assert "previews and reasons" not in html
     assert "previews" not in html and "reasons are" not in html
+
+
+def test_site_socialites_stage_pins():
+    """pub-1.2 (owner call, 2026-10-07: "jazz up the socialites section"):
+    the Socialites section hosts the owner's 3D spinning-heart stage, driven
+    dynamically by the real roll. Pinned: the section keeps its aria-label,
+    the demo's structure/heading/copy/hint, the stage motion CSS with the
+    prefers-reduced-motion kill switch, the JS motion gates (reduced motion,
+    rAF, off-viewport), the DYNAMIC roll flow (buildStage rebuilt on every
+    window render), the real inter-roll edge web, and the empty-roll
+    warming-up branch unchanged."""
+    html = _html()
+    # the section's contract: the aria-label is untouched, the structure = the demo's
+    assert '<section id="zone-socialites" aria-label="The Socialites of the Town">' in html
+    for needle in ('id="th-title">THE SOCIALITES</h2>',
+                   'class="th-sparkle" aria-hidden="true">✦</span>',
+                   '<div class="th-stage">',
+                   '<svg class="th-lines" id="th-lines" aria-hidden="true"></svg>',
+                   '<div class="th-center"><img src="logo.png" alt="TownHearts plush logo"></div>',
+                   '<div class="th-list" id="soc-stage"></div>',
+                   'class="th-hint" id="soc-status" aria-live="polite"',
+                   "Hover, focus, or tap a Socialite."):
+        assert needle in html, needle
+    # the copy line stays verbatim (the demo's th-copy == the section's copy)
+    assert ("The Socialites of the Town — the town's highly connected regulars. "
+            "They're naturally in the middle of everything, so they get their own "
+            "stage while the tables below make room for everyone else's "
+            "connections.") in html
+    # the demo's motion machinery, scoped under the section id
+    for k in ("th-arrive", "th-heart-float", "th-draw", "th-flow",
+              "th-twinkle", "th-logo-breathe"):
+        assert "@keyframes " + k in html, k
+    assert ("@media(prefers-reduced-motion:reduce){#zone-socialites *"
+            "{animation:none!important}") in html
+    assert 'soc-empty .th-stage{display:none}' in html   # the honest empty window
+    # the JS motion gates: reduced motion never starts the spinner rAF loop
+    # (transforms stay static); rAF only; off-viewport pauses via IO; resize
+    # re-arranges via RO
+    assert 'matchMedia("(prefers-reduced-motion: reduce)")' in html
+    assert "socReduced" in html and "socSpinStart" in html and "socSpinStop" in html
+    assert "IntersectionObserver" in html and "ResizeObserver" in html
+    # the dynamic roll: buildStage rebuilds per window render, shuffle kept
+    assert "function buildStage(" in html and "renderSocialites();" in html
+    assert "Z.shuffle(roll)" in html
+    # the web: canonical pairKey over the loaded graph's edges, one path/pair
+    assert "[e.a, e.b].sort().join(\"|\")" in html
+    assert "document.createElementNS" in html
+    # the retired bubble/chip markup is gone and stays gone
+    assert 'id="soc-chips"' not in html and "thdance" not in html
+    # the empty-roll branch copy is unchanged (showcase + full windows)
+    assert "The Socialites stage is still warming up." in html
+    assert "no Socialites in this window" in html
 
 
 def test_site_serves_the_published_sample_it_ships():

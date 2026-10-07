@@ -2,6 +2,14 @@
 
 Public-contract changes to the published data, docs, and site **of this repository**. This is the clean PUBLIC repo seeded by the hybrid migration — the full project history (every version from v0 through the migration) remains in the **private archive repository**, which is not part of this tree and is not republished here. The `development` branch serves the site; contract changes ship with a git tag.
 
+## pub-1.2 — site: the Socialites stage — 2026-10-07
+
+Owner call: "Can we jazz up the socialites section?" — the Socialites section upgrades to the owner's 3D stage demo (spinning CSS hearts on medallions arranged around the plush logo, a breathing center, arrival/twinkle/float motion). **Data/schema untouched**: the publisher stays `pub-1.1`, `schema_version` stays `public-3`, no tag; the four graph files are byte-identical.
+
+- **Dynamic roll (per window):** the medallions ARE the active window's own `meta.socialites` roll — `buildStage(roll, edges)` runs on EVERY window render (each data file carries its own roll), so switching tabs re-rolls the stage. Names render as text nodes + inert attributes only (no HTML-string API anywhere — the safe-DOM contract is pinned by the tests). The per-load display shuffle is unchanged (`zone_rules.shuffle` — display only).
+- **Lines = real connections:** one dashed amber path per edge between two of the window's roll muses (canonical pairKey: the two muse ids sorted + `|`-joined); a roll with no inter-roll edges draws no lines (honest). Hover/focus/click on a socialite activates them (demo behavior): their paths light and the aria-live hint names them — now with the honest stage count, "Showing X's connections (N on this stage)".
+- **Motion-safe:** the whole demo CSS ships (including the `prefers-reduced-motion` kill-switch), plus a JS gate — reduced motion never starts the spinner loop (transforms stay static), the loop pauses off-viewport (IntersectionObserver) and re-arranges on resize (ResizeObserver). The warming-up / no-socialites messages and the section's `aria-label` are unchanged; an empty window strips the stage panel to its message alone.
+
 ## pub-1.1 (epoch 3 — the campfire addressing rule) — 2026-10-06
 
 Tag: `pub-1.1`. The contract stays **`public-3`**; the publisher bumps `pub-1.0` → `pub-1.1`; `meta.epoch` → **3**. Owner-approved with adjustments (owner call 2026-10-06 22:44): **the campfire is a passive place — ambient traffic is honest breadth, not warmth.** Epoch 3 is a scoring RESET (the entire retained history re-scores under the new rule), never an erasure — no observation was deleted or rewritten anywhere; the private raw layer is byte-untouched.

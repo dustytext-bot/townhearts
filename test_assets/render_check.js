@@ -72,11 +72,21 @@ if (!m) { console.error("no script block found"); process.exit(1); }
 const violations = [];
 const textLog = [];
 
+// pub-1.2: the stage renders SVG paths (createElementNS) and positions the
+// medallions via CSS custom properties (style.setProperty) — the shim
+// supports both, storing everything in plain properties for assertions.
+function styleBox() {
+  const st = {};
+  st.setProperty = (k, v) => { st[String(k)] = String(v); };
+  st.getPropertyValue = (k) => (st[String(k)] == null ? "" : String(st[String(k)]));
+  return st;
+}
+
 function makeElement(tag) {
   const node = {
     tagName: String(tag).toUpperCase(),
     children: [],
-    style: {},
+    style: styleBox(),
     className: "",
     disabled: false,
     value: "",
@@ -90,7 +100,8 @@ function makeElement(tag) {
     },
     addEventListener(type, fn) { (node._listeners ||= {})[type] = fn; },
     fireEvent(type) { const fn = node._listeners && node._listeners[type]; if (fn) fn(); },
-    setAttribute() {},
+    setAttribute(key, val) { (node.attrs ||= {})[key] = String(val); if (key === "class") node.className = String(val); },
+    getAttribute(key) { const v = node.attrs && node.attrs[key]; return v == null ? null : v; },
   };
   for (const api of ["innerHTML", "outerHTML"]) {
     Object.defineProperty(node, api, {
@@ -110,6 +121,7 @@ function elementFor(id) {
 
 const document = {
   createElement: (tag) => makeElement(tag),
+  createElementNS: (ns, tag) => makeElement(String(tag)),
   createTextNode: (s) => { textLog.push(String(s)); return { text: String(s) }; },
   getElementById: (id) => elementFor(id),
   querySelector: (sel) => {
@@ -246,6 +258,9 @@ setTimeout(async () => {
     payloads.push(e.a_name, e.b_name);
     for (const p of Object.keys(e.common_places || {})) payloads.push(p);
   }
+  // pub-1.2: the Socialites stage renders the roll's names too — the same
+  // inert-text contract (the fixture's roll name is itself a payload)
+  for (const s of (graph.meta.socialites || [])) payloads.push(s.name);
   const evidenceText = (byId.get("q-evidence").children || []).map(textOf).join("\n");
   // the NEW aggregate evidence lines, on the mandated shape
   const e0 = graph.edges[0];

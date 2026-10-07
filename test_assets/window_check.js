@@ -33,11 +33,21 @@ if (!m) { console.error("no script block found"); process.exit(1); }
 const violations = [];
 const textLog = [];
 
+// pub-1.2: the stage renders SVG paths (createElementNS) and positions the
+// medallions via CSS custom properties (style.setProperty) — the shim
+// supports both, storing everything in plain properties for assertions.
+function styleBox() {
+  const st = {};
+  st.setProperty = (k, v) => { st[String(k)] = String(v); };
+  st.getPropertyValue = (k) => (st[String(k)] == null ? "" : String(st[String(k)]));
+  return st;
+}
+
 function makeElement(tag) {
   const node = {
     tagName: String(tag).toUpperCase(),
     children: [],
-    style: {},
+    style: styleBox(),
     className: "",
     disabled: false,
     value: "",
@@ -51,7 +61,8 @@ function makeElement(tag) {
     },
     addEventListener(type, fn) { (node._listeners ||= {})[type] = fn; },
     fireEvent(type) { const fn = node._listeners && node._listeners[type]; if (fn) fn(); },
-    setAttribute(key, val) { node.attrs = node.attrs || {}; node.attrs[key] = String(val); },
+    setAttribute(key, val) { node.attrs = node.attrs || {}; node.attrs[key] = String(val); if (key === "class") node.className = String(val); },
+    getAttribute(key) { const v = node.attrs && node.attrs[key]; return v == null ? null : v; },
   };
   for (const api of ["innerHTML", "outerHTML"]) {
     Object.defineProperty(node, api, {
@@ -79,6 +90,7 @@ function elementFor(id) {
 
 const document = {
   createElement: (tag) => makeElement(tag),
+  createElementNS: (ns, tag) => makeElement(String(tag)),
   createTextNode: (s) => { textLog.push(String(s)); return { text: String(s) }; },
   getElementById: (id) => elementFor(id),
   querySelector: (sel) => {
