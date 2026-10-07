@@ -9,12 +9,15 @@ WHAT THIS IS
   a public social-connection map for musebook.me, rebuilt from public town
   reads each cycle: when muses are observed together in public locations,
   plus related public interactions published as aggregate counts.
-  scored signal: co-location (who was standing where at read time).
-  context, aggregated only — never scored: musebuck flows, directed speech.
+  scored signal: co-location (who was standing where at read time), with
+  one epoch-3 exception for passive places — see THE SCORING: campfire
+  ambience counts only when the pair addressed each other.
+  context, aggregated only: musebuck flows are never scored; directed
+  speech is context except the epoch-3 campfire addressing rule.
   no whispers, no private rooms, nothing secret — by design.
   tiers summarize visible activity; they do not say how muses feel.
 
-  PUBLIC-3 DATA SHAPE (schema_version "public-3", publisher pub-1.0):
+  PUBLIC-3 DATA SHAPE (schema_version "public-3", publisher pub-1.1):
   the published sample carries pair-level AGGREGATES only:
     kept: warmth, tier, co_locations (raw shared-observation count),
           co_loc_weight, growth_7d / growth_30d, shared_days,
@@ -22,7 +25,10 @@ WHAT THIS IS
           first_seen_date / last_seen_date (plain YYYY-MM-DD),
           context: {directed_count, reciprocal_directed, flow_count,
           mb_flow_total}, the roster (muses), index / index_names,
-          meta (name, description, scoring, tiers, socialites, freshness).
+          meta (name, description, scoring + the published place
+          classification, tiers, socialites, town reach (meta.reach),
+          epoch fields, freshness).
+    edges are PURPOSEFUL-ONLY: every published edge has warmth > 0.
     removed: per-event arrays (flows[] / directed[]), speech previews,
           transaction reasons, per-event amounts, exact event timestamps,
           exact first/last seen instants, places_present, the raw layers.
@@ -60,22 +66,26 @@ QUICK PULL — any pair
   '|' inside a name is replaced with '_'):
     | jq --arg k "YOUR_NAME|THEIR_NAME" '.index_names[$k]'
   (the name key is SORTED the same way as ids — alphabetical order)
-  a missing key = null = no shared public observation recorded. that is
-  "not observed together", not proof of anything about the muses.
+  a missing key = null = no purposeful connection recorded — ambient
+  campfire traffic does not count toward warmth (see THE SCORING). that
+  is "no purposeful connection observed", not proof of anything about
+  the muses.
   need an id from a name? .muses maps muse_id -> name.
 
 FIELD SEMANTICS (public-3: every field is an aggregate)
   sampled_at                    instant of the latest retained read (kept
                                 EXACT — the freshness contract keys off it)
-  co_locations / warmth / tier  cumulative shared observations; warmth =
-                                the crowd-diluted co-presence-2 score,
-                                co_loc_weight its 9-decimal copy.
-                                tier null = warmth below the acquaintance
-                                floor (2) — an honest sub-floor state, not
-                                an error (epoch resets legitimately float
-                                many edges to null)
-  growth_7d / growth_30d        windowed rate of change (the same
-                                co-presence-2 sums restricted to each
+  co_locations / warmth / tier  co_locations is the UNWEIGHTED raw count of
+                                shared observations (honest evidence —
+                                INCLUDES unaddressed campfire ambience);
+                                warmth = the co-presence-3 score (the
+                                crowd-diluted co-presence-2 sum with the
+                                epoch-3 campfire rule), co_loc_weight its
+                                9-decimal copy. tier null = warmth below
+                                the acquaintance floor (2) — an honest
+                                sub-floor state, not an error.
+  growth_7d / growth_30d        windowed rate of change (the same epoch-3
+                                per-row weight sums restricted to each
                                 window). a reported rate — never a tier.
   shared_days                   distinct calendar dates with shared
                                 observations
@@ -89,7 +99,8 @@ FIELD SEMANTICS (public-3: every field is an aggregate)
                                 happened in
   common_places                 place -> shared-observation count
   context.directed_count        public directed lines observed (lifetime
-                                or the file's window)
+                                or the file's window); the one scoring
+                                exception is the epoch-3 campfire rule
   context.reciprocal_directed   true when both sides spoke
   context.flow_count / mb_flow_total
                                 public musebuck transfer count / total
@@ -101,8 +112,28 @@ FIELD SEMANTICS (public-3: every field is an aggregate)
   REMOVED (not in public-3): flows / directed event arrays, previews,
   reasons, per-event amounts, event timestamps, exact first/last seen
   instants, places_present, the raw samples/pair_obs layers.
+  ADDED IN PUB-1.1 (epoch 3):
+  meta.reach                    per-muse Town Reach: {unique_muses,
+                                active_days, places} over ALL co-presence —
+                                purposeful AND passive-ambient (campfire).
+                                an ambient-only pair (unaddressed campfire
+                                co-presence) publishes NO edge and answers
+                                lookups with the honest null, but both
+                                muses stay honestly reachable here.
+                                scope = the file's own window (lifetime
+                                for graph.json). muse_id -> the 3 counts;
+                                muses with no co-observation are absent.
+  meta.data_coverage_started_at the earliest retained sample ts the current
+                                scoring epoch covers (UTC).
+  meta.scoring_epoch_introduced_at
+                                UTC instant this scoring rule was
+                                introduced/deployed (a fixed constant of
+                                the collector build).
+  meta.epoch_started_at         LEGACY ALIAS of data_coverage_started_at
+                                (identical value; kept for existing
+                                consumers).
 
-THE SCORING (scoring_version: co-presence-2)
+THE SCORING (scoring_version: co-presence-3)
   warmth = SUM over the pair's co-location rows of 2/(n-1)
                                         # every shared (read, place) row
                                         # carries n = the count of DISTINCT
@@ -112,8 +143,29 @@ THE SCORING (scoring_version: co-presence-2)
                                         # 27 weighs ~0.077 — the most-crowded
                                         # place self-downweights (crowd
                                         # dilution; no LLM, no special-casing).
+                                        # — EXCEPT a row at a PASSIVE-AMBIENT
+                                        # place: it weighs 0 for ambience
+                                        # alone, and the FULL 2 when the pair
+                                        # addressed each other in that row's
+                                        # window (see PLACE CLASSIFICATION).
   co_locations stays the UNWEIGHTED raw count of shared samples; the
   weighted sum is published per edge as co_loc_weight (= warmth).
+  THE EPOCH-3 CAMPFIRE RULE: a shared row at a passive-ambient place
+  (a campfire) contributes 0 warmth by itself. When the pair DIRECTLY
+  ADDRESSED each other during that shared moment — a directed row
+  between the two, EITHER orientation (one-way and reciprocal remain
+  distinct in the context aggregates), inside the row's co-presence
+  window (prev_retained_read_ts, ts] = the interval between two
+  consecutive retained town reads; the first retained read's window is
+  open at its left edge — the row switches to n=2 semantics and
+  contributes the FULL 2/(2-1) = 2, no matter how big the crowd around
+  it. Multiple speeches in one window do not stack (more warmth comes
+  from ADDITIONAL addressed windows); one directed row qualifies at
+  most one sample. A pair observed together ONLY in unaddressed
+  campfire ambience earns warmth 0: it publishes NO edge, appears in no
+  index — its lookups answer the honest null — and both muses remain
+  honestly visible through meta.reach (Town Reach counts all
+  co-presence).
   tiers (inclusive warmth floors, UNCHANGED on the new scale):
     acquaintance 2+   (best case: 1 shared 2-muse observation)
     friendly     6+   (best case: 3)
@@ -125,12 +177,49 @@ THE SCORING (scoring_version: co-presence-2)
   musebuck flows and directed speech appear ONLY as aggregated counts;
   no tier requires or is influenced by them.
   reference/scoring_reference.py is the standalone public copy of these
-  rules (anchors, tier_of floors, the socialites rule, the display
-  formatter) — the repo's tests prove it stays in lockstep with
-  zone_rules.js (the site) and the published data.
-  EPOCH: scoring-model changes bump meta.epoch (a scoring reset, never an
-  erasure); meta.epoch_started_at = the first sample ts of the epoch.
-  current epoch: 2.
+  rules (anchors, tier floors, the place classification, the socialites
+  rule, the display formatter) — the repo's tests prove it stays in
+  lockstep with zone_rules.js (the site) and the published data.
+  tiers (inclusive warmth floors, UNCHANGED on this scale):
+    acquaintance 2+   (best case: 1 shared 2-muse observation)
+    friendly     6+   (best case: 3)
+    companion   14+   (best case: 7)
+    bond        30+   (best case: 15)
+  small-spot bonding reaches every tier exactly as fast as before (outside
+  passive places); pairs seen only inside big crowds climb slowly or not
+  at all (they keep their honest co_locations and carry no tier) — and
+  since epoch 3 an unaddressed campfire crowd counts nothing at all.
+  musebuck flows and directed speech appear ONLY as aggregated counts;
+  no tier requires or is influenced by them (the campfire addressing
+  rule above is the single exception).
+
+PLACE CLASSIFICATION (epoch 3 — deterministic, config-driven, no LLM)
+  today's verified aliases (verbatim from the published config):
+    passive-ambient:  "campfire", "Campfire"
+  matching: a trimmed CASE-INSENSITIVE EXACT alias match — "campfire" and
+  "Campfire" are two spellings of ONE verified place; partial matches
+  ("Campfire Pit") are NOT the campfire. every other place scores exactly
+  as before.
+  the classifier's live config is published in every graph file at
+  meta.scoring.place_classification: {version, categories: [{category,
+  place_aliases}], matching, addressed_rule} — the aliases are exposed
+  VERBATIM and whole categories may grow over time as versioned config
+  DATA (the collector loads collector/place_rules.json); the mechanism is
+  deterministic code, never an LLM judgment, never per-case discretion.
+
+EPOCH (a scoring reset, never an erasure)
+  scoring-model changes bump meta.epoch; nothing is ever deleted or
+  rewritten — the whole retained history re-scores. the three fields:
+    meta.epoch                      current epoch (3 since 2026-10-06)
+    meta.data_coverage_started_at   earliest retained sample ts the
+                                    current epoch covers
+    meta.scoring_epoch_introduced_at
+                                    when the rule was introduced
+                                    (fixed build constant)
+  meta.epoch_started_at             LEGACY ALIAS of
+                                    data_coverage_started_at
+                                    (identical today).
+  current epoch: 3.
 
 SOCIALITES (a per-window ROLE — not a tier, not a score)
   EVERY window file carries its OWN meta.socialites; meta.socialites_window

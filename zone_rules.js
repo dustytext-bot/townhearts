@@ -47,6 +47,14 @@
  *     decimals with trailing zeros trimmed, values below 0.01 as "<0.01",
  *     non-finite as a dash). Pure formatting; never changes a calculation or
  *     a stored value.
+ *   museReach (epoch 3, pub-1.1) — the focused view's Town Reach read:
+ *     meta.reach[museId] -> {muses, days, places}, or null when the muse has
+ *     no retained co-presence at all. Reach covers ALL co-presence —
+ *     purposeful AND passive-ambient (campfire) — so an ambient-only muse
+ *     with zero published edges still shows its honest town reach.
+ *   reachLine (epoch 3, pub-1.1) — the ONE shared Town Reach line
+ *     formatter: "Town reach: N muses · D days · P places"; a null/absent
+ *     reach renders "". Pure formatting; never changes a calculation.
  *   shuffle    — zone 1 stage ORDER only: randomized per page load
  *     (Fisher–Yates, Math.random). The roll itself is deterministic in the
  *     file (v1.2.3: computed per window, stored without a seeded shuffle —
@@ -181,6 +189,29 @@
     if (value > 0 && value < 0.01) return "<0.01";
     if (Number.isInteger(value)) return String(value);
     return value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+  }
+
+  // epoch 3 (pub-1.1): Town Reach — per-muse co-presence breadth over ALL
+  // co-observations, purposeful AND passive-ambient (campfire). A muse with
+  // ambient-only campfire co-presence publishes no edge but has honest reach.
+  function museReach(reach, museId) {
+    var r = (reach && typeof reach === "object") ? reach[museId] : null;
+    if (!r || typeof r !== "object") return null;
+    var u = r.unique_muses, d = r.active_days, p = r.places;
+    if (typeof u !== "number" || !Number.isFinite(u) || u < 1) return null;
+    return {
+      muses: Math.floor(u),
+      days: (typeof d === "number" && Number.isFinite(d) && d >= 0) ? Math.floor(d) : 0,
+      places: (typeof p === "number" && Number.isFinite(p) && p >= 0) ? Math.floor(p) : 0,
+    };
+  }
+
+  // The ONE shared Town Reach line — "Town reach: N muses · D days · P
+  // places"; a null/absent reach renders "" so callers can append-or-skip.
+  function reachLine(r) {
+    if (!r || typeof r !== "object" || typeof r.muses !== "number" ||
+        !Number.isFinite(r.muses) || r.muses < 1) return "";
+    return "Town reach: " + r.muses + " muses \u00b7 " + r.days + " days \u00b7 " + r.places + " places";
   }
 
   function shuffle(list) {
@@ -353,5 +384,7 @@
     focusSummary: focusSummary,
     focusCardView: focusCardView,
     displayWarmth: displayWarmth,
+    museReach: museReach,
+    reachLine: reachLine,
   };
 });

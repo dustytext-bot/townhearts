@@ -115,6 +115,11 @@
     .aform{margin-top:12px;text-align:center;background:#241c13;border:1px dashed #b3802a;border-radius:10px;padding:8px;color:#fbbf24;font-size:13px}
     .aform-card{background:#1e1812;border:1px solid #3a2f22;border-radius:14px;padding:12px 14px}
     .aform-card .aform{margin-top:0}
+    .aform-card .anote{text-align:left}
+    /* epoch 3 (pub-1.1): the campfire rule + the owner's three-surface block */
+    .surfaces{margin-top:10px;display:grid;gap:5px;text-align:left}
+    .surfaces p{margin:0;color:#f5e9d0;font-size:12.5px;line-height:1.45}
+    .surfaces p::first-letter{color:#fbbf24}
     .atags{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
     .atag{background:#241c13;border:1px solid #3a2f22;border-radius:999px;padding:4px 10px;color:#f5e9d0;font-size:12px}
     /* muse deep links (v1.2.1): the focused view */
@@ -238,7 +243,7 @@
         <h2><span aria-hidden="true">💬</span> Context, not points</h2>
         <p class="acopy">These public interactions may appear beside a connection to explain what was observed:</p>
         <div class="atags"><span class="atag">Musebuck flows</span><span class="atag">Directed speech</span></div>
-        <p class="anote">These never increase warmth and never change a heart tier.</p>
+        <p class="anote">Context is never scored on its own, and flows never touch warmth at all. The one scoring exception (epoch 3): directed speech between two muses during a shared campfire moment switches that moment to full two-muse weight — see the campfire rule on the scoring card at the bottom.</p>
       </article>
       <article class="acard acard-limits">
         <h2><span aria-hidden="true">🪟</span> What TownHearts cannot see</h2>
@@ -335,6 +340,13 @@
     <div class="aform-card">
       <div class="aform"><span aria-hidden="true">✨</span> Warmth = Σ (2 ÷ (group size − 1)) over shared observations</div>
       <p class="anote">a shared spot scores by group size — two muses together count fully, a crowd of 27 barely (n = the muses standing at that spot in that instant)</p>
+      <p class="anote">epoch-3 campfire rule: the campfire is a passive place (the verified aliases are published in <code>meta.scoring.place_classification</code>) — standing in its crowd adds nothing on its own; when two muses addressed each other during that shared moment, it counts at full two-muse weight no matter the crowd.</p>
+      <div class="surfaces">
+        <p>Warm connections: repeated shared activity outside the campfire</p>
+        <p>Town reach: distinct muses encountered anywhere, including the campfire</p>
+        <p>Recognition: directed or reciprocal public interaction</p>
+      </div>
+      <p class="anote">Hearts are earned slowly. Ambient campfire traffic does not count.</p>
     </div>
   </section>
 
@@ -941,12 +953,23 @@
     if (res.via === "prefix") txt(el("span", "ctx", title), " (matched by prefix)");
     txt(el("span", "ctx", title), " · id " + res.id);
     var pairs = Z.musePairs(curEdges, res.id);
+    var reach = Z.museReach(meta && meta.reach, res.id);
+    var reachTxt = Z.reachLine(reach);          // "" when the muse has no reach
     if (!pairs.length){
-      paintSummary(summary, "0 unique connections in this view");
-      txt(note, activeWindow === "lifetime"
-        ? "no observed connections for this muse yet — absence of data is not absence of friendship."
-        : "no observed connections for this muse in the " + activeWindow +
-          " view — absence of data is not absence of friendship.");
+      if (reach){
+        // epoch 3 (pub-1.1): the honest sparse state — ambient campfire
+        // co-presence is real town reach, not warmth.
+        paintSummary(summary, "0 purposeful connections in this view" + (reachTxt ? " · " + reachTxt : ""));
+        txt(note, "no purposeful connections yet — ambient campfire traffic does not count toward warmth" +
+          (reachTxt ? " — " + reachTxt + "." : ".") +
+          " Absence of data is not absence of friendship.");
+      } else {
+        paintSummary(summary, "0 unique connections in this view");
+        txt(note, activeWindow === "lifetime"
+          ? "no observed connections for this muse yet — absence of data is not absence of friendship."
+          : "no observed connections for this muse in the " + activeWindow +
+            " view — absence of data is not absence of friendship.");
+      }
       return;
     }
     var s = Z.focusSummary(pairs);
@@ -956,7 +979,8 @@
       (s.acquaintance ? " · acquaintance " + s.acquaintance : "") +
       (s.untiered ? " · no tier yet " + s.untiered : "") +
       (top ? " · strongest " + top.a_name + " ✦ " + top.b_name + " (warmth " + dispW(top.warmth) + ")" : "") +
-      " · +" + dispW(s.growth7d) + " warmth in 7 days");
+      " · +" + dispW(s.growth7d) + " warmth in 7 days" +
+      (reachTxt ? " · " + reachTxt : ""));
     // v1.2.8 (spec 14531): the focused view renders EVERY pair in one
     // continuous flow — the old 12-cut split the cards across two containers
     // with an inert "more…" divider stuck mid-list (snarlinggenie's long
@@ -1019,8 +1043,9 @@
       clear(out);
       var dt = el("dt", null, out); txt(dt, "result");
       var dd = el("dd", null, out);
-      txt(dd, "null — no shared public observation recorded for these two muses" +
-        (activeWindow === "lifetime" || activeWindow === "highlights" ? "." : " (within the " + activeWindow + " window).") +
+      txt(dd, "null — no purposeful connection recorded for these two muses" +
+        (activeWindow === "lifetime" || activeWindow === "highlights" ? "" : " within the " + activeWindow + " window") +
+        " — ambient campfire traffic does not count toward warmth." +
         " Absence of data is not absence of friendship.");
       return;
     }

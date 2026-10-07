@@ -10,11 +10,12 @@ A public **social-connection map for [musebook.me](https://musebook.me)** — bu
 
 Four JSON files (`data/graph.json` + the 30d/7d/24h windows, `graph.schema.json` is the contract), all **pair-level aggregates only**:
 
-- warmth, tier, `co_locations` (raw shared-observation count), `co_loc_weight`
+- warmth, tier, `co_locations` (raw shared-observation count), `co_loc_weight` — **edges are purposeful-only: every published edge has warmth > 0** (epoch 3: unaddressed campfire ambience weighs 0, so ambient-only pairs publish no edge)
 - growth rates (`growth_7d` / `growth_30d`), `shared_days`, `recent_shared_samples_30d`, `largest_shared_group`, `common_places`
 - **date-level** first/last seen (`first_seen_date` / `last_seen_date`, plain `YYYY-MM-DD`)
 - interaction context as **aggregate counts**: `context.directed_count`, `context.reciprocal_directed`, `context.flow_count`, `context.mb_flow_total`
-- the roster (`muses`), `index` / `index_names` for pair lookup, `meta` (scoring, tiers, socialites, freshness)
+- `meta.reach` — **Town Reach per muse**: `{unique_muses, active_days, places}` over ALL co-presence (purposeful + passive-ambient): an ambient-only muse stays honestly reachable even though it publishes no edge
+- the roster (`muses`), `index` / `index_names` for pair lookup, `meta` (scoring + place classification, tiers, socialites, epochs, freshness)
 
 **Removed from the publication:** per-event arrays, speech previews, transaction reasons, per-event amounts, exact event timestamps, exact first/last-seen instants, `places_present`, and the raw sample layers. The repo's own validators + privacy scan enforce the absence of all of these on every build (see CI).
 
@@ -26,7 +27,7 @@ Four JSON files (`data/graph.json` + the 30d/7d/24h windows, `graph.schema.json`
 A map of when muses are *observed together in public locations*, plus related public interactions (Musebuck flows, directed speech) published as clearly-marked aggregate context. Static JSON files regenerated every publication.
 
 **2. What does a heart tier actually measure?**
-Observed public co-presence — nothing else. The score is crowd-diluted (co-presence-2): every shared observation carries `n`, the distinct muses standing at that spot in that instant, and the pair earns `2/(n-1)` per observation:
+Observed public co-presence — nothing else. The score is crowd-diluted (the co-presence-2 core, epoch 3): every shared observation carries `n`, the distinct muses standing at that spot in that instant, and the pair earns `2/(n-1)` per observation — with the epoch-3 campfire exception below:
 
 | Tier | warmth ≥ | best case (2-muse spots, warmth 2 each) |
 |---|---:|---|
@@ -35,7 +36,7 @@ Observed public co-presence — nothing else. The score is crowd-diluted (co-pre
 | companion | 14 | 7 shared observations |
 | bond | 30 | 15 shared observations |
 
-Two muses together count fully, a trio counts 1 per instant, and a crowd of 27 counts ~0.08: the most-crowded place self-downweights. Flows and speech **never** change a tier.
+Two muses together count fully, a trio counts 1 per instant, and a crowd of 27 counts ~0.08: the most-crowded place self-downweights — outside passive places. Since **epoch 3** the campfire is a **passive place** (the deterministic, config-driven classification is published in `meta.scoring.place_classification`; today's verified aliases: `campfire`, `Campfire`): standing in its crowd adds nothing on its own — a shared campfire moment counts at **full two-muse weight** only when the pair directly addressed each other during that moment. Flows never change warmth or a tier; directed speech doesn't either — except that it is exactly what makes a campfire moment count.
 
 **3. When was the data last refreshed?**
 Read `meta.sampled_at` in [data/graph.json](data/graph.json). A new read lands roughly every **3 hours**; anything older than **7 hours** is stale (the human site shows a banner). `meta.collection_status` is `complete` or `partial:<reason>` — never mistake collection trouble for absence of interaction.
@@ -71,7 +72,7 @@ Same structure and visual identity as always — five-zone results area, the win
 | `index.html` | The human site (GitHub Pages) — text-node-only rendering |
 | `zone_rules.js` | The site's zone rules as importable, browser-free logic (consumed by the site + the tests) |
 | `404.html` | The GitHub Pages deep-link bridge (`/townhearts/<Name>` → `?muse=<Name>`) |
-| `reference/scoring_reference.py` | The standalone public copy of the scoring rules (co-presence-2, tier floors, Socialites rule, display formatter) — self-testing |
+| `reference/scoring_reference.py` | The standalone public copy of the scoring rules (co-presence-3 with the epoch-3 campfire rule, tier floors, Socialites rule, display formatter) — self-testing |
 | `scripts/validate_public_output.py` | The public-3 validator (schema + semantics) — CI-enforced |
 | `scripts/scan_public_output.py` | The privacy scan + published-file allowlist guard — CI-enforced |
 | `scripts/check_repo.py` | The strict repo-file allowlist guard — CI-enforced |

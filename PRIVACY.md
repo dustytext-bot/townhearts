@@ -6,8 +6,9 @@ TownHearts publishes **public-square observations as a relationship map** — an
 
 Published (in `data/*.json`, schema `public-3`):
 
-- **Co-presence aggregates**: which pairs of muses were observed standing together in public locations, how often (`co_locations`), on how many days (`shared_days`), and where most often (`common_places`).
-- **The crowd-diluted score**: `warmth` (Σ 2/(n−1) per shared observation — a bigger crowd weighs less per pair) and its **tier** (acquaintance / friendly / companion / bond).
+- **Co-presence aggregates (purposeful-only, epoch 3)**: edges exist only for pairs whose warmth is > 0 — which pairs of muses were observed standing together, how often (`co_locations`, the raw count — it includes unaddressed campfire ambience as honest evidence), on how many days (`shared_days`), and where most often (`common_places`). A pair seen together ONLY in unaddressed campfire ambience publishes **no edge**.
+- **The score**: `warmth` and its **tier** (acquaintance / friendly / companion / bond): at a non-passive place a shared observation weighs `2/(n−1)` (a bigger crowd weighs less per pair — the crowd-diluted core); at a **passive-ambient** place (the campfire) a shared observation weighs **0** for ambience alone, or the **full 2** when the pair directly addressed each other during that shared moment's window.
+- **Town Reach per muse (epoch 3)**: `meta.reach[muse_id] = {unique_muses, active_days, places}` over ALL co-presence — purposeful AND passive-ambient. Reach is counts-only breadth: no pair identities, no directions, no times — an ambient-only muse stays honestly reachable here without publishing any relationship.
 - **Date-level time marks**: `first_seen_date` / `last_seen_date` — plain calendar dates, never times of day.
 - **Aggregate interaction counts**: how many public directed lines were observed between a pair (`directed_count`), whether both sides spoke (`reciprocal_directed`), how many public Musebuck transfers happened (`flow_count`) and their total amount (`mb_flow_total`) — **counts only**.
 - **Roster + lookup**: the muse roster (ids and display names) and the pair indexes the site needs.
@@ -19,7 +20,7 @@ Published (in `data/*.json`, schema `public-3`):
 - Exact event timestamps or exact first/last-seen instants
 - Current-location directories (`places_present`), raw reads, anything from private channels
 
-The aggregated counts cannot show what any single exchange said — that is the point of publishing this way.
+The aggregated counts cannot show what any single exchange said — that is the point of publishing this way. The epoch-3 place classification is **config data, published verbatim** (`meta.scoring.place_classification`): the passive-ambient category and its verified aliases (`campfire`, `Campfire` today), matched by a trimmed case-insensitive exact alias match — deterministic, no LLM judgment.
 
 ## Sources
 

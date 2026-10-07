@@ -8,17 +8,20 @@ git repository — nothing here reads it.
 
 Covers:
   - the public-3 contract: schema_version in data/graph.schema.json + every
-    published file's meta, publisher_version pub-1.0, aggregate-only
-    context, plain YYYY-MM-DD first/last seen dates;
+    published file's meta, publisher_version pub-1.1, aggregate-only
+    context, plain YYYY-MM-DD first/last seen dates, the epoch-3 campfire
+    fields (epoch >= 3, data_coverage_started_at = the epoch_started_at
+    alias, scoring_epoch_introduced_at, meta.reach Town Reach),
+    purposeful-only edges (warmth > 0);
   - absence of private/event data anywhere in data/ — enforced by RUNNING
     the repo's own guards: scripts/validate_public_output.py (schema +
     semantics) and scripts/scan_public_output.py (allowlist + SQLite magic +
     forbidden keys + private paths);
   - the strict repo file allowlist (scripts/check_repo.py): the tree is
     exactly the publishable set — no db, no private paths, no strays;
-  - the reference scorer: co-presence-2 anchors (n=2/n=3/n=27), tier floors
-    2/6/14/30, the Socialites rule, the shared display formatter — and its
-    LOCKSTEP with zone_rules.js (displayWarmth equivalence over the real
+  - the reference scorer: co-presence-3 anchors (n=2/n=3/n=27 + the epoch-3
+    campfire rule), tier floors 2/6/14/30, the Socialites rule, the shared
+    display formatter — and its LOCKSTEP with zone_rules.js (displayWarmth equivalence over the real
     published warmths via node, bar scale == the bond floor) and with the
     published data (every edge's tier == tier_of(warmth));
   - the site: evidence panel = AGGREGATE summaries only (copy shape pinned),
@@ -38,6 +41,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -85,7 +89,11 @@ def test_schema_file_is_public3():
     assert "public-3" in schema.get("title", "")
     props = schema["properties"]["meta"]["properties"]
     assert props["schema_version"]["const"] == "public-3"
-    assert props["publisher_version"]["const"] == "pub-1.0"
+    assert props["publisher_version"]["const"] == "pub-1.1"
+    assert props["scoring_version"]["const"] == "co-presence-3"
+    meta_req = schema["properties"]["meta"]["required"]
+    for k in ("data_coverage_started_at", "scoring_epoch_introduced_at", "reach"):
+        assert k in meta_req, k                       # the epoch-3 fields ship
 
 
 def test_every_published_file_is_public3():
@@ -93,7 +101,7 @@ def test_every_published_file_is_public3():
         doc = _load(fname)
         m = doc["meta"]
         assert m["schema_version"] == "public-3", fname
-        assert m["publisher_version"] == "pub-1.0", fname
+        assert m["publisher_version"] == "pub-1.1", fname
         assert "collector_version" not in m            # dropped by construction
         assert "places_present" not in doc             # dropped current-locations map
         assert "flows" not in doc and "directed" not in doc   # raw event arrays never published
@@ -186,8 +194,9 @@ def test_reference_tier_floors():
 
 def test_reference_worked_example_n2_n3_n27():
     """The worked synthetic example from the reference module itself: a pair
-    with 3 shared 2-muse rows plus one trio row plus a campfire crowd —
-    warmth = 3×2 + 2×1 + 2/26, tiered per the unchanged floors."""
+    with 3 shared 2-muse rows plus one trio row plus a big-crowd row (a
+    PLAZA — the campfire has its own epoch-3 rule) — warmth = 3×2 + 2×1 +
+    2/26, tiered per the unchanged floors."""
     w = REF.warmth_from_group_sizes([2, 2, 2, 3, 27])
     assert w == 6 + 1 + 2 / 26            # 3 two-muse rows + one trio + the crowd
     assert REF.tier_of(w) == "friendly"
@@ -196,6 +205,51 @@ def test_reference_worked_example_n2_n3_n27():
     w100 = REF.warmth_from_group_sizes([27] * 100)
     assert abs(w100 - 200 / 26) < 1e-12
     assert REF.tier_of(w100) == "friendly"
+    # epoch 3: the campfire is passive-ambient — ambience weighs 0, an
+    # ADDRESSED campfire row weighs the full 2 regardless of the crowd
+    assert REF.epoch3_row_weight("Campfire", 27, False) == 0.0
+    assert REF.epoch3_row_weight("Campfire", 27, True) == 2.0
+    assert REF.epoch3_row_weight("Plaza", 27, False) == 2 / 26    # non-passive: unchanged
+
+
+def test_reference_place_classification():
+    """The public mirror of the deterministic place classifier: verified
+    aliases verbatim, case-insensitive exact matching, config-driven (
+    version bumped, categories may grow); and the LOCKSTEP with the data:
+    the published meta.scoring.place_classification must carry the same
+    passive-ambient aliases verbatim."""
+    assert REF.PLACE_CLASSIFICATION_VERSION >= 1
+    assert REF.PASSIVE_PLACE_CATEGORY == "passive-ambient"
+    assert list(REF.PASSIVE_PLACE_ALIASES) == ["campfire", "Campfire"]
+    for p in ("campfire", "Campfire", "  CAMPFIRE "):
+        assert REF.is_passive_place(p), p
+    for p in ("Campfire Pit", "fireside", "Docks", "Plaza"):
+        assert not REF.is_passive_place(p), p
+    assert "passive-ambient" in REF.PASSIVE_PLACE_RULE
+    assert "at most one sample" in REF.PASSIVE_PLACE_RULE
+    for fname in FILES:
+        pc = _load(fname)["meta"]["scoring"]["place_classification"]
+        pa = [c for c in pc["categories"] if c["category"] == "passive-ambient"]
+        assert len(pa) == 1, fname
+        assert list(pa[0]["place_aliases"]) == list(REF.PASSIVE_PLACE_ALIASES), fname
+        assert isinstance(pc["version"], int) and pc["version"] >= 1
+        assert "place_rules" in pc["matching"] or "config" in pc["matching"].lower()
+
+
+def test_epoch3_fields_published():
+    """pub-1.1: epoch >= 3 with the bookkeeping fields in all four files —
+    data_coverage_started_at == epoch_started_at (the legacy alias),
+    scoring_epoch_introduced_at a valid UTC stamp."""
+    ISO = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$")
+    started = None
+    for fname in FILES:
+        m = _load(fname)["meta"]
+        assert isinstance(m["epoch"], int) and m["epoch"] >= 3, fname
+        if started is None:
+            started = m["data_coverage_started_at"]
+        assert m["data_coverage_started_at"] == started, fname
+        assert m["data_coverage_started_at"] == m["epoch_started_at"], fname
+        assert ISO.match(m["scoring_epoch_introduced_at"]), fname
 
 
 def test_reference_display_matches_zone_rules_case_table():
@@ -242,7 +296,10 @@ def test_reference_warmth_display_matches_zone_rules_via_node():
     for w, shown in out["cases"] + out["fixture_warmths"]:
         assert REF.display_warmth(w) == shown, w
         checked += 1
-    assert checked >= 50           # the probe table + 57 real published warmths
+    # the probe table + the published warmths (epoch 3: purposeful-only
+    # edges are fewer and warmer — fewer distinct warmth values, so the
+    # floor reflects the leaner published set)
+    assert checked >= 30
 
 
 # ------------------------------------------------------- node harness suite
@@ -387,11 +444,74 @@ def test_site_serves_the_published_sample_it_ships():
 
 # ----------------------------------------------------------------- docs
 
+def test_reach_published_in_all_files():
+    """pub-1.1: meta.reach (Town Reach) rides on all four files — counts-only
+    breadth over ALL co-presence; every muse with an edge here has a reach
+    entry that at least covers its published connections; reach muses are
+    roster members; edge members come from reach (an unaddressed campfire
+    pair may have reach with NO edge — the honest split)."""
+    for fname in FILES:
+        doc = _load(fname)
+        reach = doc["meta"]["reach"]
+        roster = doc["muses"]
+        assert isinstance(reach, dict), fname
+        partners: dict = {}
+        for e in doc["edges"]:
+            partners.setdefault(e["a"], set()).add(e["b"])
+            partners.setdefault(e["b"], set()).add(e["a"])
+        for mid in partners:
+            assert mid in reach, (fname, mid)      # edges ⊆ reach
+            assert reach[mid]["unique_muses"] >= len(partners[mid]), (fname, mid)
+        for mid, r in reach.items():
+            assert mid in roster, (fname, mid)
+            assert set(r) == {"unique_muses", "active_days", "places"}
+            assert all(isinstance(v, int) and not isinstance(v, bool)
+                       and v >= 1 for v in r.values()), (fname, mid)
+    # the lifetime file's reach is the biggest key set of the four (windows
+    # are suffixes of the retained layer)
+    life = _load("graph.json")["meta"]["reach"]
+    edge_muses = partners
+    for fname in FILES:
+        assert set(_load(fname)["meta"]["reach"]) <= set(life), fname
+    # the honest split exists in the REAL data: some muse has reach but no
+    # purposeful edge in the lifetime file (ambient-only campfire pairs)
+    assert any(mid not in edge_muses for mid in life)
+
+
+def test_site_three_surfaces_and_principle():
+    """pub-1.1 (owner-approved copy, verbatim): the scoring card carries the
+    three-surface block and the principle line."""
+    html = _html()
+    for needle in ("Warm connections: repeated shared activity outside the campfire",
+                   "Town reach: distinct muses encountered anywhere, including the campfire",
+                   "Recognition: directed or reciprocal public interaction",
+                   "Hearts are earned slowly. Ambient campfire traffic does not count."):
+        assert needle in html, needle
+
+
+def test_site_purposeful_null_copy():
+    """pub-1.1: the pair lookup + the focused view state the epoch-3 rule
+    when a lookup comes up empty / a muse is ambient-only."""
+    html = _html()
+    assert "no purposeful connection recorded" in html
+    assert "ambient campfire traffic does not count toward warmth" in html
+    assert "no purposeful connections yet" in html
+    # the focused view reads meta.reach through the zone rules
+    zr = open(os.path.join(REPO, "zone_rules.js"), encoding="utf-8").read()
+    assert "function museReach(" in zr and "function reachLine(" in zr
+    assert "Z.museReach(meta && meta.reach" in html
+
+
 def test_muse_txt_documents_public3():
     muse = open(os.path.join(REPO, "muse.txt"), encoding="utf-8").read()
     assert "public-3" in muse
     assert "aggregate" in muse.lower()
     assert "scoring_reference" in muse
+    assert "pub-1.1" in muse
+    # epoch 3: the campfire rule + the place classification are documented
+    assert "campfire" in muse.lower()
+    assert "place_classification" in muse
+    assert "passive-ambient" in muse
     # the db era is gone from the agent spec — the data is the JSON contract
     for banned in ("sqlite", "townhearts.db", "schema.sql", "pairs(", "edges_log"):
         assert banned not in muse.lower(), banned
@@ -404,15 +524,18 @@ def test_api_md_recipes_over_graph_json():
     api = open(os.path.join(REPO, "API.md"), encoding="utf-8").read()
     assert "public-3" in api
     assert "graph.json" in api and "jq" in api
+    assert "meta.reach" in api            # the Town Reach recipe ships
+    assert "pub-1.1" in api
     for banned in ("sqlite3 townhearts.db", "townhearts.db", "schema.sql",
                    "edges_log", "pair_obs", "first_obs_ts"):
         assert banned not in api, banned
 
 
 def test_readme_license_spirit_and_draft_markers():
+    """Licenses are owner-confirmed (2026-10-06): MIT site code, CC BY-NC 4.0
+    data — the old DRAFT pin predates the confirmation and is retired."""
     readme = open(os.path.join(REPO, "README.md"), encoding="utf-8").read()
     assert "public-3" in readme
-    assert "DRAFT" in readme                          # licenses pending owner confirm
     assert "proprietary" in readme.lower()            # collector stays private
     for banned in ("townhearts.db", "schema.sql"):
         assert banned not in readme, banned
@@ -428,18 +551,20 @@ def test_privacy_md_public_data_only():
 def test_changelog_fresh_top_entry():
     ch = open(os.path.join(REPO, "CHANGELOG.md"), encoding="utf-8").read()
     head = ch[:2000]
-    assert "pub-1.0" in head and "public-3" in head
+    assert "pub-1.1" in head and "public-3" in head
     assert "private archive" in head.lower() or "private repo" in head.lower()
     # fresh: no pre-migration version history in this repo
     assert "v1.3.4" not in head
 
 
-def test_draft_license_files():
+def test_license_files_owner_confirmed():
+    """Owner-confirmed 2026-10-06: site/client code MIT, published aggregated
+    data CC BY-NC 4.0 — no draft markers anywhere."""
     lic = open(os.path.join(REPO, "LICENSE"), encoding="utf-8").read()
     data = open(os.path.join(REPO, "LICENSE-DATA"), encoding="utf-8").read()
-    assert lic.startswith("DRAFT") and "MIT" in lic and "dustytext-bot / Snar" in lic
-    assert data.startswith("DRAFT") and "CC BY 4.0" in data
-    assert "collector" not in lic.lower() or "not part" in lic.lower()
+    assert "MIT License" in lic and "dustytext-bot / Snar" in lic
+    assert "CC BY-NC 4.0" in data
+    assert "DRAFT" not in lic and "DRAFT" not in data
 
 
 def test_ci_workflow_runs_all_jobs():
@@ -453,10 +578,12 @@ def test_ci_workflow_runs_all_jobs():
         assert needle in ci, needle
 
 
-def test_no_remote_configured_yet():
-    """Phase B ships the tree WITHOUT a git remote — phase C creates it."""
+def test_remote_origin_configured():
+    """Phase C is live: the public serving repo carries its origin remote
+    (pages-build-deployment and the scheduled data commits push through it)."""
     r = subprocess.run(["git", "remote"], cwd=REPO, capture_output=True, text=True)
-    assert r.returncode == 0 and r.stdout.strip() == "", r.stdout
+    assert r.returncode == 0
+    assert "origin" in r.stdout.split()
     branch = subprocess.run(["git", "symbolic-ref", "--short", "HEAD"],
                             cwd=REPO, capture_output=True, text=True)
     assert branch.stdout.strip() == "development"

@@ -13,11 +13,16 @@ $TOWNHEARTS_PUBLIC_DIR, else /home/openpi/townhearts-public/data) against
   - the public-3 JSON Schema (default: data/graph.schema.json), and
   - the semantic rules JSON Schema cannot express: the four files describe
     the SAME pass (generated_at / sampled_at / collection_status / epoch /
-    epoch_started_at / scoring_version), each window names its own span
+    epoch_started_at / data_coverage_started_at / scoring_epoch_introduced_at /
+    scoring_version), each window names its own span
     (meta.socialites_window), graph.json stays the 30d-based default view
     (and shares the 7d30d roll — the Socialites rules are unchanged),
-    every edge's tier follows warmth under the unchanged co-presence-2
-    floors, first/last_seen_date are plain YYYY-MM-DD, the aggregate
+    every edge's tier follows warmth under the unchanged floors (2/6/14/30),
+    the score-basis bookkeeping fields are present (data_coverage_started_at
+    = the epoch_started_at legacy alias; scoring_epoch_introduced_at = the
+    rule's introduction stamp), the per-muse Town Reach
+    (meta.reach) covers every published muse's connections,
+    first/last_seen_date are plain YYYY-MM-DD, the aggregate
     context carries only counts/booleans/sums, and index / index_names
     resolve to the published edges (Find-a-Muse stays whole).
 
@@ -66,9 +71,57 @@ def semantic_checks(pub: dict[str, dict]) -> list[str]:
     for fname, doc in pub.items():
         m = doc.get("meta", {})
         for k in ("generated_at", "sampled_at", "collection_status",
-                  "epoch", "epoch_started_at", "scoring_version"):
+                  "epoch", "epoch_started_at", "data_coverage_started_at",
+                  "scoring_epoch_introduced_at", "scoring_version"):
             if m.get(k) != base_meta.get(k):
                 problems.append(f"{fname}: meta.{k} differs from graph.json")
+        # epoch 3 (pub-1.1, the campfire addressing rule): the epoch value is
+        # data (a scoring reset, never an erasure — production is pinned at
+        # its current epoch in the private archive's real-contract suite);
+        # the bookkeeping fields must be present and coherent per file.
+        ep = m.get("epoch")
+        if not (isinstance(ep, int) and not isinstance(ep, bool) and ep >= 1):
+            problems.append(f"{fname}: meta.epoch must be an int >= 1 "
+                            f"(a scoring reset, never an erasure), got {ep!r}")
+        # Town Reach (epoch 3): per-muse breadth over ALL co-presence —
+        # ambient (campfire) included — every file publishes its own scope.
+        reach = m.get("reach")
+        roster = doc.get("muses") or {}
+        if not isinstance(reach, dict):
+            problems.append(f"{fname}: meta.reach must be the per-muse Town "
+                            f"Reach object, got {type(reach).__name__}")
+        else:
+            for mid, r in sorted(reach.items()):
+                if not isinstance(mid, str) or not isinstance(r, dict) \
+                        or set(r) != {"unique_muses", "active_days", "places"} \
+                        or any(isinstance(r.get(k), bool)
+                               or not isinstance(r.get(k), int) or r.get(k) < 1
+                               for k in ("unique_muses", "active_days", "places")):
+                    problems.append(f"{fname}: meta.reach[{mid!r}] must carry "
+                                    "exactly unique_muses/active_days/places "
+                                    "as ints >= 1")
+                    continue
+                if mid not in roster:
+                    problems.append(f"{fname}: meta.reach[{mid!r}] is not in "
+                                    "the roster")
+            # a muse with published edges must always have a reach entry,
+            # and its reach must at least cover its PUBLISHED connections
+            # (ambient-only co-presence only ever makes reach larger)
+            partners: dict[str, set] = {}
+            for e in doc.get("edges", []):
+                for x, y in ((e.get("a"), e.get("b")), (e.get("b"), e.get("a"))):
+                    if isinstance(x, str) and isinstance(y, str):
+                        partners.setdefault(x, set()).add(y)
+            for mid in sorted(partners):
+                r = reach.get(mid)
+                if not isinstance(r, dict):
+                    problems.append(f"{fname}: {mid!r} has published edges "
+                                    "but no meta.reach entry")
+                elif isinstance(r.get("unique_muses"), int) \
+                        and r["unique_muses"] < len(partners[mid]):
+                    problems.append(f"{fname}: meta.reach[{mid!r}].unique_muses "
+                                    "is smaller than the muse's published "
+                                    "connections (reach covers ALL co-presence)")
         if fname != "graph.json":
             label = fname[len("graph_"):-len(".json")]
             if m.get("socialites_window") != label:
