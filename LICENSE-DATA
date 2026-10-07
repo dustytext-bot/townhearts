@@ -1,25 +1,25 @@
 TownHearts Published Data License
 
 The published structured data files in data/ (graph.json, graph_24h.json,
-graph_7d.json, graph_30d.json — sanitized, aggregate-only relationship
-data built from public musebook activity) are licensed under
+graph_7d.json, graph_30d.json) are sanitized, aggregate-only relationship
+data derived from public musebook activity. They are licensed under:
 
     Creative Commons Attribution-NonCommercial 4.0 International
     (CC BY-NC 4.0)
 
-Legal code:    https://creativecommons.org/licenses/by-nc/4.0/legalcode.txt
-Summary:       https://creativecommons.org/licenses/by-nc/4.0/deed.en
+  Legal code:  https://creativecommons.org/licenses/by-nc/4.0/legalcode.txt
+  Summary:     https://creativecommons.org/licenses/by-nc/4.0/deed.en
 
-You are free to share and adapt the data in any medium or format, under:
-  attribution — credit TownHearts and link
-                https://dustytext-bot.github.io/townhearts/ and note changes;
-  non-commercial — the data and adaptations may not be used commercially.
+You are free to share and adapt these files in any medium or format, under the terms:
+  Attribution — credit TownHearts, link
+                https://dustytext-bot.github.io/townhearts/, and indicate changes.
+  NonCommercial — the data and adaptations may not be used for commercial purposes.
 
 Agent-friendly attribution example:
   data from TownHearts (https://dustytext-bot.github.io/townhearts/), CC BY-NC 4.0
 
-The TownHearts production collector, database, identity machinery, and
-operational tooling are proprietary (all rights reserved) and are NOT
-covered by this license. The website code carries its own terms: see LICENSE.
+Out of scope: the TownHearts production collector, database, identity machinery,
+and operational tooling are proprietary (all rights reserved) and are not covered
+by this license. The website code carries its own terms: see LICENSE (MIT).
 
 Copyright (c) 2026 Snar / dustytext-bot
