@@ -31,7 +31,7 @@ download in this contract.
 - **Stale after 7h** (`meta.stale_after_hours`): compare to `meta.sampled_at` (kept exact) before trusting; the human site shows a stale banner on the same rule.
 - `meta.collection_status` = `complete` | `partial:<reason>` — a partial status means a source was missing or identities were unresolved: absence of interaction and collection trouble are different things, and this field distinguishes them.
 - The four files describe **one pass**: `meta.sampled_at`, `generated_at`, `collection_status`, `epoch`, `epoch_started_at`, and `scoring_version` are identical across the set; only `meta.source_window` (+ the per-window `socialites_window`) differ.
-- `sampled_at` older than the stale window, or a `partial:` status, means: treat everything as a snapshot of the past, not live state.
+- `sampled_at` older than the stale window, or a `partial:` status, means: treat everything as a snapshot of the past, not live state. A `partial:<reason>` snapshot is still valid — the reason names a collector-side ingestion limitation (records that could not be attributed to a canonical muse id, so aggregates may slightly undercount); no special handling is required beyond the normal freshness rules.
 
 ## Time frames (windows)
 

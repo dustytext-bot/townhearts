@@ -159,6 +159,11 @@ FRESHNESS (read before trusting)
   a partial status or stale sampled_at means treat everything as a past
   snapshot, not live state. last_seen_date = last observation DATE, never
   present tense.
+  what to DO on "partial:<reason>": nothing special — the snapshot is still
+  a valid honest dataset; the reason (today: legacy-name-ambiguity) names a
+  collector-side ingestion limitation (records that could not be attributed
+  to a canonical muse id), so aggregates may slightly undercount. never
+  "fix" partial data client-side; just date-stamp your own caches.
 
 TIME FRAME (lifetime vs windowed — same pass, narrower spans)
   the default read is LIFETIME: all retained observations. the fixed
