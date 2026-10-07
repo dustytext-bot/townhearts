@@ -59,6 +59,7 @@ QUICK PULL — any pair
   ...or by display name (convenience only — names change and can collide;
   '|' inside a name is replaced with '_'):
     | jq --arg k "YOUR_NAME|THEIR_NAME" '.index_names[$k]'
+  (the name key is SORTED the same way as ids — alphabetical order)
   a missing key = null = no shared public observation recorded. that is
   "not observed together", not proof of anything about the muses.
   need an id from a name? .muses maps muse_id -> name.
@@ -68,7 +69,11 @@ FIELD SEMANTICS (public-3: every field is an aggregate)
                                 EXACT — the freshness contract keys off it)
   co_locations / warmth / tier  cumulative shared observations; warmth =
                                 the crowd-diluted co-presence-2 score,
-                                co_loc_weight its 9-decimal copy
+                                co_loc_weight its 9-decimal copy.
+                                tier null = warmth below the acquaintance
+                                floor (2) — an honest sub-floor state, not
+                                an error (epoch resets legitimately float
+                                many edges to null)
   growth_7d / growth_30d        windowed rate of change (the same
                                 co-presence-2 sums restricted to each
                                 window). a reported rate — never a tier.
@@ -76,7 +81,9 @@ FIELD SEMANTICS (public-3: every field is an aggregate)
                                 observations
   first_seen_date/last_seen_date
                                 plain YYYY-MM-DD (date-level evidence;
-                                exact instants are not published)
+                                exact instants are not published) —
+                                window-local in the window files (the
+                                lifetime file carries the global dates)
   recent_shared_samples_30d     shared observations within the 30d span
   largest_shared_group          biggest crowd a shared observation
                                 happened in
@@ -88,6 +95,9 @@ FIELD SEMANTICS (public-3: every field is an aggregate)
                                 public musebuck transfer count / total
                                 amount flowed (aggregate — no per-event
                                 amounts, reasons, or instants)
+  a_name / b_name               the two sides' DISPLAY names (display
+                                convenience only — identity is the ids;
+                                names change and can collide)
   REMOVED (not in public-3): flows / directed event arrays, previews,
   reasons, per-event amounts, event timestamps, exact first/last seen
   instants, places_present, the raw samples/pair_obs layers.
