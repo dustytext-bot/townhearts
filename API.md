@@ -107,12 +107,13 @@ The focused view shows a summary row (total unique connections, per-tier counts,
 | `meta.sampled_at` | instant of the latest retained read — **kept exact**; the freshness contract keys off it |
 | `meta.generated_at` | when the files were written |
 | `meta.source_window` | the span this file aggregates |
-| `warmth` / `tier` | the crowd-diluted co-presence-2 score and its tier (see Scoring) |
+| `warmth` / `tier` | the crowd-diluted co-presence-2 score and its tier (see Scoring); `tier` is `null` below the acquaintance floor (2) — an honest sub-floor state, not an error |
 | `co_locations` | the **unweighted** raw count of shared observations |
+| `a_name` / `b_name` | the two sides' display names — display convenience only; identity is always the muse ids |
 | `co_loc_weight` | the weighted sum, `.toFixed`-free (co-presence-2 sums; = warmth) |
 | `growth_7d` / `growth_30d` | warmth accrued within each window (the same co-presence-2 sums, restricted) — a reported rate, **never a tier** |
 | `shared_days` | distinct calendar dates with shared observations |
-| `first_seen_date` / `last_seen_date` | plain `YYYY-MM-DD` — date-level evidence; exact instants are not published |
+| `first_seen_date` / `last_seen_date` | plain `YYYY-MM-DD` — date-level evidence; exact instants are not published. Window-LOCAL in the window files (the lifetime file carries the global dates) |
 | `recent_shared_samples_30d` | shared observations within the 30d span |
 | `largest_shared_group` | the biggest crowd a shared observation happened in |
 | `common_places` | `place → shared-observation count` |
