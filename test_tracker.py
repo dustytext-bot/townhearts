@@ -439,9 +439,10 @@ def test_site_socialites_stage_pins():
     """pub-1.2 (owner call, 2026-10-07: "jazz up the socialites section"):
     the Socialites section hosts the owner's 3D spinning-heart stage, driven
     dynamically by the real roll. Pinned: the section keeps its aria-label,
-    the demo's structure/heading/copy/hint, the stage motion CSS with the
-    prefers-reduced-motion kill switch, the JS motion gates (reduced motion,
-    rAF, off-viewport), the DYNAMIC roll flow (buildStage rebuilt on every
+    the demo's structure/heading/copy/hint, the CSS-native spinner
+    animation (owner call 15:04: replace the JS rAF rotation with a native
+    infinite CSS animation) and the reduced-motion kill switch, the DYNAMIC
+    roll flow (buildStage rebuilt on every
     window render), the real inter-roll edge web, and the empty-roll
     warming-up branch unchanged."""
     html = _html()
@@ -453,7 +454,7 @@ def test_site_socialites_stage_pins():
                    '<svg class="th-lines" id="th-lines" aria-hidden="true"></svg>',
                    '<div class="th-center"><img src="logo.png" alt="TownHearts plush logo"></div>',
                    '<div class="th-list" id="soc-stage"></div>',
-                   'class="th-hint" id="soc-status" aria-live="polite"',
+                   'class="afoot th-hint" id="soc-status" aria-live="polite"',
                    "Hover, focus, or tap a Socialite."):
         assert needle in html, needle
     # the copy line stays verbatim (the demo's th-copy == the section's copy)
@@ -462,18 +463,23 @@ def test_site_socialites_stage_pins():
             "stage while the tables below make room for everyone else's "
             "connections.") in html
     # the demo's motion machinery, scoped under the section id
-    for k in ("th-arrive", "th-heart-float", "th-draw", "th-flow",
-              "th-twinkle", "th-logo-breathe"):
+    for k in ("th-arrive", "th-heart-spin", "th-heart-float", "th-draw",
+              "th-flow", "th-twinkle", "th-logo-breathe"):
         assert "@keyframes " + k in html, k
     assert ("@media(prefers-reduced-motion:reduce){#zone-socialites *"
             "{animation:none!important}") in html
     assert 'soc-empty .th-stage{display:none}' in html   # the honest empty window
-    # the JS motion gates: reduced motion never starts the spinner rAF loop
-    # (transforms stay static); rAF only; off-viewport pauses via IO; resize
-    # re-arranges via RO
-    assert 'matchMedia("(prefers-reduced-motion: reduce)")' in html
-    assert "socReduced" in html and "socSpinStart" in html and "socSpinStop" in html
-    assert "IntersectionObserver" in html and "ResizeObserver" in html
+    # the spin is CSS-native: the full spinner rule exists (keyframes run,
+    # staggered by --i, hover/focus/active accelerates to .9s); the JS rAF
+    # loop and its gates are gone entirely; off-viewport no longer gates the
+    # spin since the CSS engine owns it; resize still re-arranges via RO
+    assert ('#zone-socialites .th-spinner{position:absolute;inset:0;display:block;'
+            'transform-style:preserve-3d;will-change:transform;'
+            'animation:th-heart-spin 3.8s linear infinite;'
+            'animation-delay:calc(var(--i,0)*-430ms)}') in html
+    assert '#zone-socialites .th-person:is(:hover,:focus-visible,.active) .th-spinner{animation-duration:.9s}' in html
+    assert "socSpin" not in html and "socFrame" not in html
+    assert "IntersectionObserver" not in html and "ResizeObserver" in html
     # the dynamic roll: buildStage rebuilds per window render, shuffle kept
     assert "function buildStage(" in html and "renderSocialites();" in html
     assert "Z.shuffle(roll)" in html

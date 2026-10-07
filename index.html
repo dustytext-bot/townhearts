@@ -163,7 +163,7 @@
   #zone-socialites .th-center img{display:block;width:190px;height:190px;object-fit:contain;filter:drop-shadow(0 8px 22px #0008);animation:th-logo-breathe 3.6s ease-in-out infinite}
   #zone-socialites .th-medallion{display:grid;width:105px;height:105px;place-items:center;border:2px solid var(--line);border-radius:50%;background:radial-gradient(circle at 50% 42%,#ff9f001c,transparent 64%),var(--medal);perspective:520px;transition:transform .25s,border-color .25s,box-shadow .25s}
   #zone-socialites .th-float{position:relative;display:block;width:52px;height:48px;animation:th-heart-float 3.2s ease-in-out infinite;animation-delay:calc(var(--i)*-370ms)}
-  #zone-socialites .th-spinner{position:absolute;inset:0;display:block;transform-style:preserve-3d;animation:none!important;will-change:transform}
+  #zone-socialites .th-spinner{position:absolute;inset:0;display:block;transform-style:preserve-3d;will-change:transform;animation:th-heart-spin 3.8s linear infinite;animation-delay:calc(var(--i,0)*-430ms)}
   #zone-socialites .th-heart{position:absolute;left:10px;top:9px;width:33px;height:33px;border-radius:5px;transform-style:preserve-3d;transform:rotate(45deg) translateZ(0);background:#6b281b;box-shadow:4px 5px 9px #210b0759}
   #zone-socialites .th-heart:before,#zone-socialites .th-heart:after{position:absolute;width:33px;height:33px;content:"";border-radius:50%;background:inherit}
   #zone-socialites .th-heart:before{left:-17px;top:0}
@@ -726,9 +726,7 @@
   var socPeople = [];        // display (shuffled) order: {node, medal, name, id}
   var socLinks = {};         // pairKey -> {a, b, pair, el} — the inter-roll edges on stage
   var socOrder = [];         // pair keys in draw order (deterministic)
-  var socSpinners = [];      // rebuilt per window; the rAF loop reads the live array
-  var socMotionInit = false, socReduced = false, socHasRaf = false,
-      socVisible = true, socRafId = 0, socStartTs = 0;
+  var socMotionInit = false;
 
   function socClass(node, cls, on){          // classList-free toggle — works on
     // HTML buttons AND svg paths (className is an SVGAnimatedString there)
@@ -831,7 +829,7 @@
   function buildStage(roll, edges){
     if (socSection) socClass(socSection, "soc-empty", false);
     clear(socStage);
-    socPeople = []; socLinks = {}; socOrder = []; socSpinners = [];
+    socPeople = []; socLinks = {}; socOrder = [];
     var order = (Z && typeof Z.shuffle === "function") ? Z.shuffle(roll) : roll;
     var at = {};                                  // muse_id -> display index
     order.forEach(function(entry, i){
@@ -850,7 +848,6 @@
       txt(el("span", "th-name", btn), name);      // the pill — one text node, never markup
       if (id != null) at[id] = i;
       socPeople.push({ node: btn, medal: medal, name: name, id: id });
-      socSpinners.push(spin);
     });
     var seen = {};                                // one path per inter-roll pair
     (Array.isArray(edges) ? edges : []).forEach(function(e){
@@ -875,14 +872,12 @@
         if (socHasClass(p.node, "active")) socClearActive(); else socActivate(i);
       });
     });
-    socSpinStart();                               // (re)start the spinners if motion is on
   }
 
   function socEmpty(){                  // the stage not built: badge + fresh state
     if (socSection) socClass(socSection, "soc-empty", true);
     clear(socStage); clear(socSvg);
-    socPeople = []; socLinks = {}; socOrder = []; socSpinners = [];
-    socSpinStop();
+    socPeople = []; socLinks = {}; socOrder = [];
   }
 
   function renderSocialites(){
@@ -913,56 +908,19 @@
     socHintDefault();
   }
 
-  // Stage motion — ONE rAF loop drives the roll's spinners (the CSS keyframe
-  // spinner is intentionally off; the loop keeps the hearts turning and only
-  // accelerates on hover/focus/active, demo parity). Hard gates:
-  //   prefers-reduced-motion — the loop NEVER runs (transforms stay static);
-  //   no rAF (the test shims / very old engines) — the loop never runs;
-  //   off-viewport — paused via IntersectionObserver (cheap battery win);
-  //   size changes — ResizeObserver re-arranges the ellipse.
+  // Stage motion — the spin is CSS-native (owner call 2026-10-07):
+  // .th-spinner runs the existing th-heart-spin keyframes on an infinite
+  // 3.8s loop (staggered by --i, accelerated to .9s on hover/focus/active,
+  // demo parity). No JS rotation loop — fewer engine dependencies; the
+  // site-wide reduced-motion media query stays the single motion gate. This
+  // init only wires ResizeObserver so the ellipse and edge paths re-arrange
+  // on resize.
   function socInitMotion(){
     if (socMotionInit) return;
     socMotionInit = true;
-    try {
-      socReduced = !!(typeof matchMedia === "function" && matchMedia &&
-                      matchMedia("(prefers-reduced-motion: reduce)").matches);
-    } catch (e) { socReduced = false; }
-    socHasRaf = (typeof requestAnimationFrame === "function") &&
-                (typeof cancelAnimationFrame === "function");
-    if (typeof IntersectionObserver === "function"){
-      try {
-        new IntersectionObserver(function(entries){
-          socVisible = entries.some(function(en){ return !!en.isIntersecting; });
-          if (socVisible) socSpinStart(); else socSpinStop();
-        }).observe(socStage);
-      } catch (e) {}
-    }
     if (typeof ResizeObserver === "function"){
       try { new ResizeObserver(function(){ socDraw(); }).observe(socStage); } catch (e) {}
     }
-  }
-  function socSpinStart(){
-    if (socRafId || !socHasRaf || socReduced || !socVisible || !socSpinners.length) return;
-    socStartTs = (typeof performance === "object" && performance && performance.now) ? performance.now() : 0;
-    socRafId = requestAnimationFrame(socFrame);
-  }
-  function socSpinStop(){
-    if (socRafId){ cancelAnimationFrame(socRafId); socRafId = 0; }
-  }
-  function socFrame(now){
-    socRafId = 0;
-    if (!socVisible) return;                        // paused off-viewport
-    var elapsed = now - socStartTs, deg = null;
-    socSpinners.forEach(function(spinner, index){
-      var fast = false;
-      try {
-        var owner = (typeof spinner.closest === "function") ? spinner.closest(".th-person") : null;
-        fast = !!(owner && typeof owner.matches === "function" && owner.matches(":hover,:focus-visible,.active"));
-      } catch (e) { fast = false; }
-      deg = ((elapsed * (fast ? 0.36 : 0.095) + index * 47) % 360);
-      spinner.style.transform = "rotateY(" + deg + "deg)";
-    });
-    socRafId = requestAnimationFrame(socFrame);
   }
 
   // ================= v1.2.5 + v1.2.14: the default page is HIGHLIGHTS ======
