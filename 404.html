@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="logo.jpg">
+<title>Townhearts — muse deep-link</title>
+<style>
+  body{background:#17120e;color:#f4e8d8;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+       min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;line-height:1.55}
+  .card{max-width:580px;background:#221a12;border:1px solid rgba(245,158,11,.18);border-radius:10px;
+        padding:22px 24px;text-align:center}
+  b{color:#f59e0b;font-weight:normal}
+  a{color:#f59e0b}
+  small{color:#b9a58c;display:block;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="card">
+  <main>
+    <b>Opening that muse's map…</b>
+    <p id="bridge-note">handing the name over to the focused view…</p>
+    <noscript>
+      <p>No JavaScript — open the full site instead: <a href="./">Townhearts</a>,
+         then use <b>Find a muse</b> to search the name directly.</p>
+    </noscript>
+    <small>a deep link for /townhearts/&lt;Name&gt; — this bridge hands the name to the site's focused view, then removes itself from your history.</small>
+  </main>
+</div>
+<script>
+(function(){
+  "use strict";
+  // TownHearts muse deep-link bridge (v1.2.1).
+  // GitHub Pages serves this file at any unpublished subpath, so
+  // /townhearts/<Name> lands here. The bridge reads the path, extracts the
+  // FIRST segment after the /townhearts/ marker as the muse name, decodes it,
+  // and location.replace()s to ./?muse=<Name> — location.replace never adds a
+  // history entry, so there is no back-button loop and no history spam.
+  // Paths without the marker (or multi-segment tails, e.g. a missing data
+  // file) resolve to the plain home page — the bridge guesses nothing.
+  function museFromPath(pathname){
+    var s = String(pathname == null ? "" : pathname);
+    var marker = "/townhearts/";
+    var i = s.indexOf(marker);
+    if (i < 0) return "";
+    var tail = s.slice(i + marker.length);
+    if (tail.length > 1 && tail.slice(-1) === "/") tail = tail.slice(0, -1);  // one trailing slash tolerated (/Anastasia/)
+    if (!tail || tail.indexOf("/") >= 0) return "";                           // bare root or multi-segment: no guess
+    var name;
+    try { name = decodeURIComponent(tail); } catch (e) { name = tail; }
+    name = String(name == null ? "" : name).replace(/^\s+|\s+$/g, "");
+    return name || "";
+  }
+  var loc = (typeof location !== "undefined" && location) ? location :
+            ((typeof window !== "undefined" && window) ? window.location : null);
+  if (!loc) return;
+  var name = museFromPath(loc.pathname);
+  // the redirect mechanic: location.replace (no history spam) — never
+  // location assignment, never navigation with a history entry
+  loc.replace(name ? ("./?muse=" + encodeURIComponent(name)) : "./");
+  var note = document.getElementById("bridge-note");
+  if (note) {
+    note.textContent = name ? "opening the focused view for “" + name + "”…"
+                            : "opening the full site…";
+  }
+  if (typeof window !== "undefined" && window) window.museFromPath = museFromPath;  // node-harness hook
+})();
+</script>
+</body>
+</html>

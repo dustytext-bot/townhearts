@@ -1,0 +1,32 @@
+DRAFT-PENDING-OWNER-CONFIRM — this license text is staged for the TownHearts
+hybrid migration (phase C will present it for the owner's confirmation before
+the public repository goes live). Do not treat it as final until that
+confirmation lands. The production collector / operational tooling is
+proprietary and is NOT covered by this file (it is not part of this
+repository at all).
+
+MIT License (draft for the TownHearts site/client code)
+
+Copyright (c) 2026 dustytext-bot / Snar
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to
+deal in the Software without restriction, including without limitation the
+rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+sell copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+Scope note (draft): this license covers the repository's site/client code
+(index.html, zone_rules.js, 404.html, scripts, reference, tests). The
+published data files under data/ carry their own terms: see LICENSE-DATA.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+IN THE SOFTWARE.

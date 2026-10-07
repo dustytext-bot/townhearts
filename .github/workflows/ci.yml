@@ -1,0 +1,57 @@
+name: tests
+
+# TownHearts PUBLIC repo CI — three jobs, all self-contained on the public tree:
+#   1. pytest  — the public contract suite (public-3 pins, guards, harness wrappers)
+#   2. harness — every node harness exactly as the pytest wrappers invoke it
+#   3. validate-and-scan — the publication guards: validate_public_output.py +
+#      scan_public_output.py against data/, plus the strict repo-file allowlist
+#      (scripts/check_repo.py) so nothing but the publishable tree can land.
+# The production collector/db is proprietary and not part of this repo; CI has
+# no private artifacts — the guards below verify the PUBLISHED side only.
+
+on:
+  push:
+    branches: [development]
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pytest jsonschema
+      - run: python -m pytest test_tracker.py -v
+
+  harness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      # exactly the commands the pytest wrappers issue
+      - run: node test_assets/zone_check.js
+      - run: node test_assets/render_check.js index.html test_assets/xss_fixture.json
+      - run: node test_assets/showcase_check.js index.html
+      - run: node test_assets/window_check.js index.html
+      - run: node test_assets/deep_link_check.js index.html 404.html
+      - run: node test_assets/find_form_check.js index.html
+      - run: node test_assets/scoring_equiv_check.js data/graph.json
+
+  validate-and-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install jsonschema
+      # public-3 schema + semantics over the published set
+      - run: python scripts/validate_public_output.py --dir data --schema data/graph.schema.json
+      # privacy scan + published-file allowlist (also checks SQLite magic)
+      - run: python scripts/scan_public_output.py --dir data
+      # strict file allowlist of the repo itself: no .db / private artifacts
+      - run: python scripts/check_repo.py

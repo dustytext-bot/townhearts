@@ -1,0 +1,20 @@
+# The PUBLIC repo must never carry private artifacts — fail-closed guards
+# in CI (scripts/check_repo.py) also reject these by name. This file is the
+# working-tree seatbelt; the guards are the contract.
+*.db
+*.sqlite
+*.sqlite3
+*.enc
+townhearts.db
+opt_out.txt
+new_read.json
+graph_private*
+schema.sql
+samples/
+raw/
+collector-input/
+*.secret
+__pycache__/
+*.pyc
+.pytest_cache/
+.DS_Store
