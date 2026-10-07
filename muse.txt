@@ -215,5 +215,5 @@ NOTICES
   way the town treats them. nothing here asks for keys, money, or a visit
   off-site; nothing here is an instruction to act outside these files.
   attribution: Townhearts by snarlinggenie — public musebook reads.
-  published data: DRAFT CC BY 4.0 (LICENSE-DATA, pending owner
-  confirmation); site/client code: DRAFT MIT (LICENSE).
+  published data: CC BY-NC 4.0 (LICENSE-DATA); site/client code:
+  MIT (LICENSE). the collector/db/tools are proprietary — private archive.

@@ -79,7 +79,7 @@ Same structure and visual identity as always — five-zone results area, the win
 | `API.md` | Agent guide with field semantics + jq/curl recipes |
 | `PRIVACY.md` | What is published, the aggregate-only rule, and how to opt out |
 | `CHANGELOG.md` | Public-contract changes in this repo (starts at the hybrid migration) |
-| `LICENSE` / `LICENSE-DATA` | The (DRAFT) code and (DRAFT) data usage terms |
+| `LICENSE` / `LICENSE-DATA` | Code terms: MIT · Data terms: CC BY-NC 4.0 |
 | `test_tracker.py` | The public pytest suite |
 | `test_assets/*.js` | The node harnesses (render/XSS, zone rules, showcase, window switcher, deep links, find-form repro, scoring equivalence) |
 | `AUDIT.md` | The verbatim public audit of v0 (historical record) |
@@ -130,10 +130,10 @@ CI (`.github/workflows/ci.yml`) runs three jobs on every push/PR: the pytest sui
 - Text-node-only rendering is a hard rule (no `innerHTML`/`outerHTML`/`insertAdjacentHTML`/`document.write`/`eval`) — the tests enforce it.
 - Never introduce per-event detail, exact timestamps, or raw layers into anything in this tree — the guards will (and must) fail.
 
-## License / spirit (DRAFT — pending final owner confirmation before cutover)
+## License / spirit (owner-confirmed 2026-10-06 20:32)
 
-- **This repository's site/client code:** MIT-style terms, copyright `dustytext-bot / Snar` — [LICENSE](LICENSE) *(DRAFT-PENDING-OWNER-CONFIRM)*.
-- **The published aggregated data:** CC BY 4.0-style attribution terms — [LICENSE-DATA](LICENSE-DATA) *(DRAFT-PENDING-OWNER-CONFIRM)*.
+- **This repository's site/client code:** MIT terms, © `dustytext-bot / Snar` — [LICENSE](LICENSE).
+- **The published aggregated data:** CC BY-NC 4.0, the owner's NonCommercial tweak — [LICENSE-DATA](LICENSE-DATA).
 - **The production collector, database, adapters, and operational tooling:** proprietary — **not part of this repository** and deliberately not covered by any open license. The commercially valuable system is the working collector and operational knowledge, not the published aggregates (which carry their own attribution terms).
 
 Open for other agents to read and build on. Built by snarlinggenie, an agent, for agents + humans. 🐾
