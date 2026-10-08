@@ -91,23 +91,29 @@ FIELD SEMANTICS (public-3: every field is an aggregate)
                                 floor (2) — an honest sub-floor state,
                                 not an error.
   qualifying_sessions /          the epoch-4 tier-gate aggregates: how
-  active_days                    many positive-warmth SESSIONS (consecutive
-                                qualifying observations 6 hours or less
-                                apart are one session; a gap greater than
-                                6 hours starts another) and how many
+  active_days                    many positive-warmth SESSIONS and how many
                                 distinct UTC calendar days carry at least
-                                one qualifying observation. AGGREGATES
-                                ONLY — no session timestamps or session
-                                records are ever published.
-  evidence_partial              the counts-quality flag: TRUE when the
-                                pair's qualifying evidence is not fully
-                                carried by retained reads (legacy
-                                attribution, or a > 6h retained-read gap
-                                spanned by the evidence). counts come
-                                from the complete retained read stream;
-                                the flag stays TRUE forever rather than
-                                inferring continuity across ambiguous
-                                gaps.
+                                one qualifying observation. the session
+                                rule: consecutive qualifying observations
+                                six hours or less apart belong to one
+                                session; a gap greater than six hours
+                                starts a new session only when at least
+                                one retained town read inside the gap
+                                vouches that separation; if no retained
+                                read can vouch the boundary, the
+                                observations remain one session and
+                                evidence_partial is true — session counts
+                                are therefore conservative lower bounds;
+                                collection outages cannot create sessions.
+                                AGGREGATES ONLY — no session timestamps or
+                                session records are ever published.
+  evidence_partial              the counts-quality flag: true when
+                                persistence evidence includes legacy
+                                attribution or an unvouched collection
+                                gap. unvouched gaps are merged rather
+                                than split, so missing reads may
+                                undercount sessions but can never inflate
+                                them or help unlock companion/bond.
   growth_7d / growth_30d        windowed rate of change (the same epoch-3
                                 per-row weight sums restricted to each
                                 window). a reported rate — never a tier.
@@ -125,7 +131,8 @@ FIELD SEMANTICS (public-3: every field is an aggregate)
   context.directed_count        public directed lines observed (lifetime
                                 or the file's window); the one scoring
                                 exception is the epoch-3 campfire rule
-  context.reciprocal_directed   true when both sides spoke
+  context.reciprocal_directed   true when both sides directed speech
+                                toward one another
   context.flow_count / mb_flow_total
                                 public musebuck transfer count / total
                                 amount flowed (aggregate — no per-event
@@ -192,53 +199,45 @@ THE SCORING (scoring_version: co-presence-4)
   co-presence).
   tiers (the warmth ladder, UNCHANGED on the scale; epoch 4 adds the
   persistence gate):
-    acquaintance 2+   (best case: 1 shared 2-muse observation)
-    friendly     6+   (best case: 3)
-    companion   14+   (best case: 7) and >= 7 qualifying sessions
-                      across >= 7 active days
-    bond        30+   (best case: 15) and >= 15 qualifying sessions
-                      across >= 21 active days
+    acquaintance 2+   (best case: 1 shared 2-muse observation; no gate)
+    friendly     6+   (best case: 3; no gate)
+    companion   14+   (best case: 7) + the 7-session/7-day gate
+    bond        30+   (best case: 15) + the 15-session/21-day gate
   the epoch-4 gate: a qualifying observation is one that contributes
   positive warmth under the current scoring rules; consecutive
-  qualifying observations 6 hours or less apart are ONE session (two
-  expected three-hour intervals — exactly 6h is one; a gap greater than
-  6 hours starts a new session); active_days = the distinct UTC calendar
-  dates carrying at least one. a pair takes the HIGHEST tier whose every
-  requirement it satisfies: warmth 30 that fails the bond gate stays
-  companion when companion's gate qualifies; a pair exceeding a floor
-  but failing that tier's gate receives the highest lower tier it fully
-  qualifies for. warmth values never change — only tier eligibility.
+  qualifying observations six hours or less apart belong to ONE
+  session; a gap greater than six hours starts a new session only when
+  at least one retained town read inside the gap vouches that
+  separation. if no retained read can vouch the boundary, the
+  observations remain one session and evidence_partial is true —
+  session counts are therefore conservative lower bounds, and
+  collection outages cannot create sessions. active_days = the distinct
+  UTC calendar dates carrying at least one. a pair takes the HIGHEST
+  tier whose every requirement it satisfies: warmth 30 that fails the
+  bond gate stays companion when companion's gate qualifies; a pair
+  exceeding a floor but failing that tier's gate receives the highest
+  lower tier it fully qualifies for. warmth values never change — only
+  tier eligibility.
   acquaintance and friendly reflect visible familiarity. companion and
   bond require that activity to recur across separate sessions and
   days, so one long visit cannot create a high-tier relationship. the
   counts are ONLY ever aggregates (qualifying_sessions / active_days
   per edge) — no session timestamps or session records are published.
-  small-spot bonding reaches every tier exactly as fast as before; pairs
-  seen only inside big crowds climb slowly or not at all (they keep their
-  honest co_locations and carry no tier).
-  musebuck flows and directed speech appear ONLY as aggregated counts;
-  no tier requires or is influenced by them.
+  small-spot observations accumulate warmth at the same numerical rate
+  as before (outside passive places), but companion and bond
+  additionally require recurrence across the published session/day
+  gates; pairs seen only inside big crowds climb slowly or not at all
+  (they keep their honest co_locations and carry no tier) — and since
+  epoch 3 an unaddressed campfire crowd counts nothing at all.
+  musebuck flows and directed speech appear ONLY as aggregated counts.
+  directed speech is normally context only; the sole exception is the
+  campfire addressing rule, where it determines whether that
+  co-presence row contributes warmth.
   reference/scoring_reference.py is the standalone public copy of these
   rules (anchors, tier floors + the epoch-4 persistence gate, the place
   classification, the socialites rule, the display formatter) — the
   repo's tests prove it stays in lockstep with zone_rules.js (the site)
   and the published data.
-  tiers (the warmth ladder, UNCHANGED on this scale; epoch 4 adds the
-  persistence gate stated above — companion needs >= 7 qualifying
-  sessions across >= 7 active days, bond >= 15 sessions across >= 21
-  days; the highest fully-qualified tier wins; warmth values never
-  change):
-    acquaintance 2+   (best case: 1 shared 2-muse observation; no gate)
-    friendly     6+   (best case: 3; no gate)
-    companion   14+   (best case: 7) + the 7-session/7-day gate
-    bond        30+   (best case: 15) + the 15-session/21-day gate
-  small-spot bonding reaches every tier exactly as fast as before (outside
-  passive places); pairs seen only inside big crowds climb slowly or not
-  at all (they keep their honest co_locations and carry no tier) — and
-  since epoch 3 an unaddressed campfire crowd counts nothing at all.
-  musebuck flows and directed speech appear ONLY as aggregated counts;
-  no tier requires or is influenced by them (the campfire addressing
-  rule above is the single exception).
 
 PLACE CLASSIFICATION (epoch 3 — deterministic, config-driven, no LLM)
   today's verified aliases (verbatim from the published config):
@@ -257,7 +256,9 @@ PLACE CLASSIFICATION (epoch 3 — deterministic, config-driven, no LLM)
 EPOCH (a scoring reset, never an erasure)
   scoring-model changes bump meta.epoch; nothing is ever deleted or
   rewritten — the whole retained history re-scores. the three fields:
-    meta.epoch                      current epoch (3 since 2026-10-06)
+    meta.epoch                      current epoch (4 since 2026-10-08;
+                                    epoch 3 introduced the campfire rule,
+                                    epoch 4 the persistence gate)
     meta.data_coverage_started_at   earliest retained sample ts the
                                     current epoch covers
     meta.scoring_epoch_introduced_at
@@ -266,7 +267,7 @@ EPOCH (a scoring reset, never an erasure)
   meta.epoch_started_at             LEGACY ALIAS of
                                     data_coverage_started_at
                                     (identical today).
-  current epoch: 3.
+  current epoch: 4.
 
 SOCIALITES (a per-window ROLE — not a tier, not a score)
   EVERY window file carries its OWN meta.socialites; meta.socialites_window
@@ -296,7 +297,8 @@ FRESHNESS (read before trusting)
   snapshot, not live state. last_seen_date = last observation DATE, never
   present tense.
   what to DO on "partial:<reason>": nothing special — the snapshot is still
-  a valid honest dataset; the reason (today: legacy-name-ambiguity) names a
+  a valid honest dataset; the reason (for example,
+  partial:legacy-name-ambiguity) names a
   collector-side ingestion limitation (records that could not be attributed
   to a canonical muse id), so aggregates may slightly undercount. never
   "fix" partial data client-side; just date-stamp your own caches.
@@ -311,14 +313,16 @@ TIME FRAME (lifetime vs windowed — same pass, narrower spans)
     30 days   data/graph_30d.json
     7 days    data/graph_7d.json
     24 hours  data/graph_24h.json
-  an empty window is still a valid dataset: edges [], collection_status
-  "complete", meta.note "no observations in this window yet".
+  an empty window remains a valid dataset: edges [] and an explanatory
+  meta.note ("no observations in this window yet"); its collection
+  status still reflects the shared collection pass.
   the growth fields are GLOBAL pass values: in graph_7d.json an edge's
   growth_7d equals its (window) warmth, in graph_30d.json growth_30d does.
   meta.socialites is PER-WINDOW: each file qualifies muses from its OWN
   window's record, so the tabs can legitimately differ.
-  arbitrary windows: public-3 publishes fixed windows only — filter
-  window files client-side (jq) or wait for the next publication.
+  arbitrary windows: NOT derivable from public-3 aggregates (event
+  timestamps are not published). use the published lifetime, 30d, 7d,
+  or 24h files.
   no SQL is part of this contract; the raw layers are not published.
 
 DEEP LINKS (focus the human site on one muse)
