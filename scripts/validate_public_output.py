@@ -17,7 +17,9 @@ $TOWNHEARTS_PUBLIC_DIR, else /home/openpi/townhearts-public/data) against
     scoring_version), each window names its own span
     (meta.socialites_window), graph.json stays the 30d-based default view
     (and shares the 7d30d roll — the Socialites rules are unchanged),
-    every edge's tier follows warmth under the unchanged floors (2/6/14/30),
+    every edge's tier follows warmth AND the epoch-4 persistence gate (the
+    unchanged floors 2/6/14/30; companion >= 7 qualifying sessions across
+    >= 7 active days; bond >= 15 across >= 21 — the edge's own aggregates),
     the score-basis bookkeeping fields are present (data_coverage_started_at
     = the epoch_started_at legacy alias; scoring_epoch_introduced_at = the
     rule's introduction stamp), the per-muse Town Reach
@@ -47,7 +49,7 @@ sys.path.insert(0, os.path.join(REPO, "reference"))
 # the tier/contract constants are re-pointed to the standalone public copy
 # (reference/scoring_reference.py), which must stay in lockstep with the
 # published data and zone_rules.js (test_tracker.py enforces that).
-from scoring_reference import tier_of  # noqa: E402
+from scoring_reference import tier_gate_public, tier_of_evidence  # noqa: E402
 
 PUBLIC_DIR_FALLBACK = "/home/openpi/townhearts-public/data"
 DEFAULT_SCHEMA = os.path.join(REPO, "data", "graph.schema.json")
@@ -132,6 +134,10 @@ def semantic_checks(pub: dict[str, dict]) -> list[str]:
                 problems.append(
                     "graph_30d.json: socialites roll differs from graph.json "
                     "(the default view must stay 30d-based)")
+        # epoch 4: the persistence gate rides on every file's meta, verbatim
+        if m.get("tier_gate") != tier_gate_public():
+            problems.append(f"{fname}: meta.tier_gate must be the published "
+                            "epoch-4 gate (the reference's tier_gate_public())")
         # per-edge aggregates + index integrity
         by_pair: dict[str, dict] = {}
         for e in doc.get("edges", []):
@@ -146,8 +152,21 @@ def semantic_checks(pub: dict[str, dict]) -> list[str]:
                     and not isinstance(e.get("warmth"), bool)
                     and e.get("warmth", 0) > 0):
                 problems.append(f"{fname}: {k}: warmth must be a number > 0")
-            if e.get("tier") != tier_of(e.get("warmth", -1)):
-                problems.append(f"{fname}: {k}: tier does not follow warmth")
+            if not (isinstance(e.get("qualifying_sessions"), int)
+                    and not isinstance(e.get("qualifying_sessions"), bool)
+                    and e.get("qualifying_sessions", 0) >= 1):
+                problems.append(f"{fname}: {k}: qualifying_sessions must be an int >= 1")
+            if not (isinstance(e.get("active_days"), int)
+                    and not isinstance(e.get("active_days"), bool)
+                    and e.get("active_days", 0) >= 1):
+                problems.append(f"{fname}: {k}: active_days must be an int >= 1")
+            if not isinstance(e.get("evidence_partial"), bool):
+                problems.append(f"{fname}: {k}: evidence_partial must be a bool")
+            if e.get("tier") != tier_of_evidence(e.get("warmth", -1),
+                                                 e.get("qualifying_sessions"),
+                                                 e.get("active_days")):
+                problems.append(f"{fname}: {k}: tier does not follow warmth "
+                                "AND the persistence gate")
             for dk in ("first_seen_date", "last_seen_date"):
                 if not DATE_RE.match(str(e.get(dk, ""))):
                     problems.append(f"{fname}: {k}: {dk} must be YYYY-MM-DD")

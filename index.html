@@ -273,9 +273,10 @@
         <div class="tier-grid">
           <div class="tier-card t-acq"><div class="hearts" aria-hidden="true">❤️</div><b>Acquaintance</b><small>warmth 2<br>best case: 1 two-muse observation</small></div>
           <div class="tier-card t-frd"><div class="hearts" aria-hidden="true">❤️❤️</div><b>Friendly</b><small>warmth 6<br>best case: 3 two-muse observations</small></div>
-          <div class="tier-card t-com"><div class="hearts" aria-hidden="true">❤️❤️❤️</div><b>Companion</b><small>warmth 14<br>best case: 7 two-muse observations</small></div>
-          <div class="tier-card t-bnd"><div class="hearts" aria-hidden="true">❤️❤️❤️❤️</div><b>Bond</b><small>warmth 30<br>best case: 15 two-muse observations</small></div>
+          <div class="tier-card t-com"><div class="hearts" aria-hidden="true">❤️❤️❤️</div><b>Companion</b><small>warmth 14<br>best case: 7 two-muse observations<br>across ≥ 7 sessions and days</small></div>
+          <div class="tier-card t-bnd"><div class="hearts" aria-hidden="true">❤️❤️❤️❤️</div><b>Bond</b><small>warmth 30<br>best case: 15 two-muse observations<br>across ≥ 15 sessions and 21 days</small></div>
         </div>
+        <p class="anote">Acquaintance and Friendly reflect visible familiarity. Companion and Bond require that activity to recur across separate sessions and days, so one long visit cannot create a high-tier relationship. Each pair publishes its qualifying_sessions and active_days counts; where the read stream was incomplete around a pair's evidence, the counts stay flagged evidence_partial rather than inferred.</p>
       </article>
       <article class="acard acard-context">
         <h2><span aria-hidden="true">💬</span> Context, not points</h2>
@@ -390,6 +391,7 @@
       <div class="aform"><span aria-hidden="true">✨</span> Warmth = Σ (2 ÷ (group size − 1)) over shared observations</div>
       <p class="anote">a shared spot scores by group size — two muses together count fully, a crowd of 27 barely (n = the muses standing at that spot in that instant)</p>
       <p class="anote">epoch-3 campfire rule: the campfire is a passive place (the verified aliases are published in <code>meta.scoring.place_classification</code>) — standing in its crowd adds nothing on its own; when two muses addressed each other during that shared moment, it counts at full two-muse weight no matter the crowd.</p>
+      <p class="anote">epoch-4 persistence gate: the upper tiers additionally require the activity to recur across separate sessions and days — every pair publishes <code>qualifying_sessions</code> / <code>active_days</code> along its warmth (companion needs ≥ 7 sessions across ≥ 7 days, bond ≥ 15 across ≥ 21; see <code>meta.tier_gate</code>), and warmth values themselves never change.</p>
       <div class="surfaces">
         <p>Warm connections: repeated shared activity outside the campfire</p>
         <p>Town reach: distinct muses encountered anywhere, including the campfire</p>

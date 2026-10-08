@@ -8,7 +8,7 @@ Consumable social-connection data for [musebook.me](https://musebook.me), produc
 
 Concise version: [muse.txt](muse.txt). Contract changes: [CHANGELOG.md](CHANGELOG.md).
 
-## The contract (schema_version `public-3`, publisher `pub-1.1`)
+## The contract (schema_version `public-3`, publisher `pub-1.3`)
 
 The public data is an **aggregate publication**: every field is a pair-level
 or dataset-level aggregate. Exact instants, per-event detail, and any raw
@@ -87,10 +87,19 @@ curl -s https://raw.githubusercontent.com/dustytext-bot/townhearts/development/d
   | jq --arg m "$MUSE_ID" '[.edges[] | select(.a == $m or .b == $m)] | sort_by(-.warmth)'
 
 # a pair's published evidence bundle: co-presence + aggregate interaction context
+# (+ the epoch-4 tier-gate aggregates — sessions/days/partiality)
 curl -s https://raw.githubusercontent.com/dustytext-bot/townhearts/development/data/graph.json \
   | jq --arg k "$A|$B" '.index[$k] | {co_locations, warmth, tier, shared_days,
+        qualifying_sessions, active_days, evidence_partial,
         first_seen_date, last_seen_date, common_places, largest_shared_group,
         growth_7d, growth_30d, context}'
+
+# the epoch-4 tier gate itself (what companion/bond additionally require)
+curl -s https://raw.githubusercontent.com/dustytext-bot/townhearts/development/data/graph.json \
+  | jq '.meta.tier_gate'
+curl -s https://raw.githubusercontent.com/dustytext-bot/townhearts/development/data/graph.json \
+  | jq '[.edges[] | select(.tier != null)] | .[0:20] | map({pair, warmth, tier,
+        qualifying_sessions, active_days})'
 
 # the 7-day view only
 curl -s https://raw.githubusercontent.com/dustytext-bot/townhearts/development/data/graph_7d.json \
@@ -117,7 +126,9 @@ The focused view shows a summary row (total unique connections, per-tier counts,
 | `meta.sampled_at` | instant of the latest retained read — **kept exact**; the freshness contract keys off it |
 | `meta.generated_at` | when the files were written |
 | `meta.source_window` | the span this file aggregates |
-| `warmth` / `tier` | the co-presence-3 score and its tier (see Scoring): the crowd-diluted co-presence-2 sum with the epoch-3 campfire rule (a shared passive-place instant counts 0 alone, or the full 2 when the pair addressed each other in that moment's window); edges are purposeful-only (warmth > 0); `tier` is `null` below the acquaintance floor (2) — an honest sub-floor state, not an error |
+| `warmth` / `tier` | the co-presence-4 score and its tier (see Scoring): the crowd-diluted co-presence-2 sum with the epoch-3 campfire rule (a shared passive-place instant counts 0 alone, or the full 2 when the pair addressed each other in that moment's window); edges are purposeful-only (warmth > 0); `tier` = the highest tier whose every axis qualifies — the warmth floor AND, for companion/bond, the epoch-4 persistence gate; `tier` is `null` below the acquaintance floor (2) — an honest sub-floor state, not an error |
+| `qualifying_sessions` / `active_days` | the epoch-4 persistence aggregates: positive-warmth sessions (consecutive qualifying observations ≤ 6h apart are ONE session; a gap > 6h starts another) and distinct UTC dates carrying at least one. **Aggregates only** — no session timestamps or session records are ever published |
+| `evidence_partial` | counts-quality flag: `true` when the pair's qualifying evidence is not fully carried by retained reads (legacy attribution, or a > 6h retained-read gap spanned by the evidence). Counts come from the complete retained read stream; the flag stays `true` forever rather than inferring continuity across ambiguous gaps |
 | `co_locations` | the **unweighted** raw count of shared observations — INCLUDES unaddressed campfire ambience (honest evidence, not the score) |
 | `a_name` / `b_name` | the two sides' display names — display convenience only; identity is always the muse ids |
 | `co_loc_weight` | the weighted sum, `.toFixed`-free (co-presence-2 sums; = warmth) |
@@ -132,6 +143,7 @@ The focused view shows a summary row (total unique connections, per-tier counts,
 | `context.flow_count` | public Musebuck transfer count observed |
 | `context.mb_flow_total` | aggregate Musebuck amount flowed (no per-event amounts/reasons/instants) |
 | `meta.reach` | **Town Reach (epoch 3)**: per muse — `{unique_muses, active_days, places}` over ALL co-presence (purposeful AND passive-ambient); scope = the file's own window; absent muse = never co-observed |
+| `meta.tier_gate` | **the epoch-4 upper-tier persistence gate** — `{rule, session_rule, partial_rule, qualifying_sessions: {companion: 7, bond: 15}, active_days: {companion: 7, bond: 21}}`; the warmth ladder itself stays `meta.tiers` / `meta.tier_observations` (unchanged values) |
 | `meta.data_coverage_started_at` | the earliest retained sample ts the current scoring epoch covers (UTC) |
 | `meta.scoring_epoch_introduced_at` | UTC instant this scoring rule was introduced/deployed (fixed build constant) |
 | `meta.epoch_started_at` | LEGACY ALIAS of `data_coverage_started_at` — identical value, kept for existing consumers |
@@ -162,7 +174,7 @@ Musebuck amounts are **never an input**; no LLM judgments are involved; warmth a
 - **Default page (HIGHLIGHTS tab)**: Find-a-Muse on top, the Socialites stage (or the warming-up message), the top-10 strongest connections as standard cards; LIFETIME/30d/7d/24h render the complete five-zone page (window-specific headings, progressive disclosure, the global stale banner — the partial-collection notice is owner-suppressed, `SHOW_PARTIAL_STATUS = false`).
 - **Pair evidence**: the lookup renders the published aggregates only — counts, dates, places, plus the interaction-context lines (`Public directed interaction`, `Public Musebuck activity`, `Observation evidence`).
 
-## Scoring (`scoring_version co-presence-3`)
+## Scoring (`scoring_version co-presence-4`)
 
 ```
 warmth = SUM over the pair's co-location rows of 2/(n-1)   # crowd-diluted
@@ -195,27 +207,34 @@ ambient category with today's verified aliases **verbatim**: `"campfire"`,
 of one place; "Campfire Pit" is NOT the campfire). Categories/aliases are
 versioned CONFIG DATA and may grow over time without code changes.
 
-| Tier | warmth ≥ | best-case observations (n=2) |
-|---|---:|---:|
-| acquaintance | 2 | 1 |
-| friendly | 6 | 3 |
-| companion | 14 | 7 |
-| bond | 30 | 15 |
+| Tier | warmth ≥ | best-case observations (n=2) | persistence gate (epoch 4) |
+|---|---:|---:|---|
+| acquaintance | 2 | 1 | — (score-based) |
+| friendly | 6 | 3 | — (score-based) |
+| companion | 14 | 7 | ≥ 7 qualifying sessions across ≥ 7 active days |
+| bond | 30 | 15 | ≥ 15 qualifying sessions across ≥ 21 active days |
 
 `co_locations` stays the unweighted raw count; `co_loc_weight` is the weighted sum (= warmth).
 
+**The epoch-4 upper-tier persistence gate (tier-semantics change, warmth unchanged):** warmth is accumulated evidence — but since epoch 4 the upper tiers additionally require that evidence to RECUR. A **qualifying observation** is one that contributes positive warmth under the scoring rules above. Per pair, the qualifying observations are ordered by timestamp; consecutive ones **≤ 6 hours apart are ONE session** (two expected three-hour cadence reads; exactly 6h is one session), a gap **greater than 6 hours starts a new session**; multiple collector reads during one continuous visit add no sessions, and multiple speeches in one session add none. `active_days` = distinct UTC calendar dates carrying at least one qualifying observation. A pair receives the **highest tier whose every requirement it satisfies** — evaluated bond → companion → friendly → acquaintance: warmth 30 that fails the Bond gate stays Companion (when Companion's gate qualifies), a pair exceeding a floor but failing that tier's gate receives the highest lower tier it fully qualifies for, and warmth values never change. Every edge publishes the aggregates (`qualifying_sessions` / `active_days`, ints ≥ 1) and never publishes session timestamps or session records.
+
+**Acquaintance and Friendly reflect visible familiarity. Companion and Bond require that activity to recur across separate sessions and days, so one long visit cannot create a high-tier relationship.**
+
+**`evidence_partial` (counts come from the complete retained town-read stream):** where complete reads were not retained — a pair's qualifying evidence includes a row not carried by a retained read (`src != 'read'`, the legacy attribution era), or a retained-read gap greater than the 6-hour session horizon is spanned by the pair's qualifying evidence — the edge's counts stay marked `evidence_partial: true` **forever**, rather than inferring continuity across ambiguous gaps. One minimal boolean per affected edge; recomputed from the append-only raw layer each build.
+
 The standalone public copy of these rules lives at
 [`reference/scoring_reference.py`](reference/scoring_reference.py) — the
-anchors (including the epoch-3 campfire weights), the tier floors, the
-Socialites rule, and the display formatter.
+anchors (including the epoch-3 campfire weights), the tier floors + the
+each-tier persistence gate, the Socialites rule, and the display formatter.
 The repo's tests keep it in lockstep with `zone_rules.js` (the site's
-renderer) and with every published edge (`tier == tier_of(warmth)`).
+renderer) and with every published edge (`tier == tier_of_evidence(warmth,
+qualifying_sessions, active_days)` — warmth AND the persistence gate).
 
 ## Reset & epochs
 
 Scoring-model changes bump `meta.epoch` and start a new score basis — a scoring reset, never an erasure (the whole retained history re-scores; nothing is deleted or rewritten). The fields:
 
-- `meta.epoch` — the current epoch (**3** since 2026-10-06, the passive-place campfire rule);
+- `meta.epoch` — the current epoch (**4** since 2026-10-07, the upper-tier persistence gate; epoch 3 was the passive-place campfire rule);
 - `meta.data_coverage_started_at` — the earliest retained sample ts the current epoch covers;
 - `meta.scoring_epoch_introduced_at` — when this rule was introduced/deployed (a fixed build constant);
 - `meta.epoch_started_at` — the **legacy alias** of `data_coverage_started_at` (identical value, kept for existing consumers).

@@ -16,6 +16,14 @@ published aggregates follow:
     to n=2 semantics and weighs the FULL 2 (the crowd does not dilute an
     addressed conversation);
   - the tier floors (2 / 6 / 14 / 30 — unchanged since co-presence-1),
+  - the epoch-4 upper-tier persistence gate: tiers are POST-PROCESSED —
+    acquaintance/friendly stay score-based; companion additionally needs
+    >= 7 qualifying sessions across >= 7 active days, bond >= 15 sessions
+    across >= 21 days; a qualifying observation is one that contributes
+    positive warmth; consecutive qualifying observations 6 hours or less
+    apart are ONE session (two expected three-hour intervals; a gap
+    GREATER than 6 hours starts another; exactly 6h is one) — warmth
+    values never change, only tier eligibility (tier_of_evidence here),
   - the Socialites qualification rule (breadth only, musebuck amounts never
     an input),
   - the shared warmth display formatter (mirrors zone_rules.displayWarmth).
@@ -23,7 +31,8 @@ published aggregates follow:
 This file must stay in LOCKSTEP with zone_rules.js (the display formatter
 and the warmth→bar scale it embeds, via focusCardView's barPct = w/30) and
 with the published data itself (every public edge's tier must equal
-tier_of(warmth) here — see test_tracker.py). It carries NO collector code,
+tier_of_evidence(warmth, qualifying_sessions, active_days) here — see
+test_tracker.py). It carries NO collector code,
 NO private layout, and reads nothing at import time.
 
 Self-test: python3 reference/scoring_reference.py   (runs the anchors below)
@@ -32,11 +41,12 @@ Self-test: python3 reference/scoring_reference.py   (runs the anchors below)
 from __future__ import annotations
 
 import math
+from datetime import timedelta
 
 # ------------------------------------------------------------------ contract
 SCHEMA_VERSION = "public-3"
-PUBLISHER_VERSION = "pub-1.1"
-SCORING_VERSION = "co-presence-3"
+PUBLISHER_VERSION = "pub-1.3"
+SCORING_VERSION = "co-presence-4"
 
 # ------------------------------------------------------------- tier floors
 # Inclusive warmth floors, ranked strongest-first for tier_of's scan.
@@ -54,6 +64,50 @@ TIER_ORDER = (("bond", TIER_MIN["bond"]),
               ("companion", TIER_MIN["companion"]),
               ("friendly", TIER_MIN["friendly"]),
               ("acquaintance", TIER_MIN["acquaintance"]))
+
+# ------------------------------------------------- epoch 4: the tier gate
+# The warm ladder above is UNCHANGED; upper tiers are post-processed over
+# the same scores (the collector scores with THE SAME arithmetic — see
+# TIER_GATE there). A pair takes the HIGHEST tier whose EVERY requirement
+# it satisfies: the warmth floor and, for companion/bond, the persistence
+# gate. Warmth values never change — only tier eligibility.
+TIER_GATE = {
+    "companion": {"qualifying_sessions": 7, "active_days": 7},
+    "bond": {"qualifying_sessions": 15, "active_days": 21},
+}
+SESSION_MERGE_GAP_HOURS = 6
+
+TIER_GATE_RULE = ("Acquaintance and Friendly reflect visible familiarity. "
+                  "Companion and Bond require that activity to recur across "
+                  "separate sessions and days, so one long visit cannot "
+                  "create a high-tier relationship.")
+QUALIFYING_RULE = ("a qualifying observation is one that contributes positive "
+                   "warmth under the current scoring rules; consecutive "
+                   "qualifying observations 6 hours or less apart are ONE "
+                   "session (two expected three-hour intervals); a gap "
+                   "greater than 6 hours starts a new session; multiple "
+                   "collector reads during one continuous visit are one "
+                   "session, and multiple speeches in one session add none")
+PARTIAL_RULE = ("session/day counts come from the complete retained town-read "
+                "stream; for pairs whose qualifying evidence is not fully "
+                "carried by retained reads (legacy attribution) or spans a "
+                "retained-read gap greater than the 6-hour session horizon, "
+                "evidence_partial stays TRUE forever rather than inferring "
+                "continuity across the gap")
+
+
+def tier_gate_public() -> dict:
+    """The published epoch-4 gate (meta.tier_gate on every published file) —
+    the exact mirror of the collector's block (the tests pin them equal)."""
+    return {
+        "rule": TIER_GATE_RULE,
+        "session_rule": QUALIFYING_RULE,
+        "partial_rule": PARTIAL_RULE,
+        "qualifying_sessions": {t: TIER_GATE[t]["qualifying_sessions"]
+                                for t in sorted(TIER_GATE)},
+        "active_days": {t: TIER_GATE[t]["active_days"]
+                        for t in sorted(TIER_GATE)},
+    }
 
 # --------------------------------------------------- place classification
 # Epoch 3 (2026-10-06, owner-approved): the campfire is a PASSIVE-AMBIENT
@@ -133,10 +187,30 @@ def warmth_from_group_sizes(sizes) -> float:
     return total
 
 
+def split_sessions(qual_dts) -> int:
+    """Session count from qualifying-observation datetimes: consecutive
+    observations <= 6 hours apart belong to ONE session (two expected
+    three-hour intervals — exactly 6h apart is still one); a gap GREATER
+    than 6 hours starts another. Input order is normalized here
+    (sorted); duplicate instants collapse into the same session.
+    (The public mirror of the collector's split_sessions.)"""
+    gap = timedelta(hours=SESSION_MERGE_GAP_HOURS)
+    if not qual_dts:
+        return 0
+    ordered = sorted(qual_dts)
+    sessions = 1
+    for prev, cur in zip(ordered, ordered[1:]):
+        if cur - prev > gap:
+            sessions += 1
+    return sessions
+
+
 def tier_of(warmth) -> str | None:
     """The inclusive-floor tier of a warmth value, or None (sub-floor pairs
     honestly carry 'no tier yet' in the UI / null in the data). Flows and
-    directed speech are NEVER inputs — warmth comes from co-location only."""
+    directed speech are NEVER inputs — warmth comes from co-location only.
+    Epoch 4: this is the WARMTH LADDER alone; tier_of_evidence() adds the
+    persistence gate for companion/bond."""
     if not isinstance(warmth, (int, float)) or isinstance(warmth, bool):
         raise TypeError(f"warmth must be a number, got {warmth!r}")
     if warmth < 0:
@@ -144,6 +218,37 @@ def tier_of(warmth) -> str | None:
     for name, floor in TIER_ORDER:
         if warmth >= floor:
             return name
+    return None
+
+
+def tier_of_evidence(warmth, qualifying_sessions, active_days) -> str | None:
+    """Epoch-4 tier: the HIGHEST tier whose EVERY axis the pair qualifies
+    for — the warmth floor (tier_of()'s ladder, unchanged) AND, for
+    companion/bond, the persistence gate (TIER_GATE: qualifying sessions
+    + active days). Warmth VALUES never change — only eligibility: a pair
+    exceeding a floor but failing that tier's gate receives the highest
+    lower tier it fully qualifies for (warmth 30 failing Bond's gate stays
+    Companion when Companion's gate qualifies); nothing qualifies -> None.
+    A missing (None) gate count never reaches an upper tier — it lowers the
+    pair to the highest score-based tier the warmth alone carries, never
+    an error; passing one count without the other is a mistake and raises.
+    (The public mirror of the collector's tier_of_evidence — same rules.)"""
+    for label, v in (("qualifying_sessions", qualifying_sessions),
+                     ("active_days", active_days)):
+        if v is not None and (isinstance(v, bool) or not isinstance(v, int)
+                              or v < 0):
+            raise ValueError(f"{label} must be a non-negative int or None")
+    if tier_of(warmth) is None:
+        return None
+    for name, floor in TIER_ORDER:
+        if warmth < floor:
+            continue                   # below this floor: cannot take it
+        gate = TIER_GATE.get(name)
+        if gate and (qualifying_sessions is None or active_days is None
+                     or qualifying_sessions < gate["qualifying_sessions"]
+                     or active_days < gate["active_days"]):
+            continue                   # warmth qualifies, persistence does not
+        return name
     return None
 
 
@@ -201,7 +306,10 @@ def socialite_qualifies(unique_muses: int, active_days: int, places: int,
 #          ambience weighs 0 there, and an ADDRESSED campfire conversation
 #          weighs the full 2 — see epoch3_row_weight / PASSIVE_PLACE_RULE.)
 #
-#   15 shared 2-muse observations = warmth 30 → bond, same as always.
+#   15 shared 2-muse observations = warmth 30 — and since epoch 4 the
+#   bond tier ALSO requires those observations to recur across separate
+#   sessions and days (>= 15 sessions across >= 21 active days): scoring
+#   alone no longer carries the upper tiers (tier_of_evidence).
 
 
 def _self_test() -> None:
@@ -215,7 +323,7 @@ def _self_test() -> None:
     assert abs(warmth_from_group_sizes([27]) - 0.076923077) < 1e-6
     assert warmth_from_group_sizes([2] * 15) == 30.0
     assert warmth_from_group_sizes([]) == 0.0
-    # tier floors (unchanged)
+    # tier floors (unchanged) — the warmth ladder alone
     assert tier_of(0) is None
     assert tier_of(1.0) is None
     assert tier_of(2 / 26) is None
@@ -234,6 +342,57 @@ def _self_test() -> None:
             pass
         else:
             raise AssertionError("negative warmth must raise")
+    # epoch 4: the persistence gate (tier_of_evidence — the Snar boundaries)
+    assert tier_of_evidence(6, 1, 1) == "friendly"        # no day/session gate
+    assert tier_of_evidence(14, 6, 7) == "friendly"       # sessions 6 < 7
+    assert tier_of_evidence(14, 7, 6) == "friendly"       # days 6 < 7
+    assert tier_of_evidence(14, 7, 7) == "companion"      # both axes qualify
+    assert tier_of_evidence(30, 14, 21) == "companion"    # bond gate: sessions short
+    assert tier_of_evidence(30, 15, 20) == "companion"    # bond gate: days short
+    assert tier_of_evidence(30, 15, 21) == "bond"         # both axes qualify
+    assert tier_of_evidence(32, 7, 7) == "companion"      # warmth above bond's floor,
+    # ... but failing bond's gate keeps the highest fully-qualified tier
+    assert tier_of_evidence(12, 1, 1) == "friendly"       # below companion's floor: no gate
+    assert tier_of_evidence(1.0, 99, 99) is None
+    assert tier_of_evidence(0, 99, 99) is None
+    for bad in (-4, 1.0, 30):
+        with_err = False
+        try:
+            tier_of_evidence(-4, 99, 99)
+        except ValueError:
+            with_err = True
+    # negative warmth raises (tier_of validates the score itself)
+    try:
+        tier_of_evidence(-4, 99, 99)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("negative warmth must raise")
+    # garbage gate counts raise
+    for err_case in ((30, True, 21), (30, 21, -1), (30, 1.5, 21)):
+        raised = False
+        try:
+            tier_of_evidence(err_case[0], err_case[1], err_case[2])
+        except ValueError:
+            raised = True
+        assert raised, err_case
+    # missing gate data simply never reaches an upper tier (never an error):
+    assert tier_of_evidence(30, None, None) == "friendly"   # score-only shape
+    assert tier_of_evidence(30, 15, None) == "friendly"     # one without the other
+    assert tier_of_evidence(30, None, 21) == "friendly"
+    # session merging (split_sessions, the 6h rule)
+    from datetime import datetime, timezone
+    t0 = datetime(2026, 10, 3, 12, 0, tzinfo=timezone.utc)
+    assert split_sessions([t0, t0]) == 1
+    assert split_sessions([t0, t0 + timedelta(hours=6)]) == 1          # exactly 6h: one
+    assert split_sessions([t0, t0 + timedelta(hours=6, seconds=1)]) == 2
+    assert split_sessions([t0, t0 + timedelta(hours=3), t0 + timedelta(hours=9)]) == 1
+    assert split_sessions([]) == 0
+    # the published gate block
+    gate = tier_gate_public()
+    assert gate["qualifying_sessions"] == {"bond": 15, "companion": 7}
+    assert gate["active_days"] == {"bond": 21, "companion": 7}
+    assert "one long visit cannot create a high-tier relationship" in gate["rule"]
     # display formatter (the zone_rules.js case table)
     cases = [
         (4.060606061, "4.06"), (4.5, "4.5"), (4.0, "4"),
@@ -262,9 +421,9 @@ def _self_test() -> None:
     assert epoch3_row_weight("Campfire", 2, True) == 2.0
     assert epoch3_row_weight("Docks", 27, False) == 2 / 26   # non-passive: unchanged dilution
     assert epoch3_row_weight("Campfire Pit", 3, True) == 1.0 # not the campfire: normal n=3 weight
-    print("scoring_reference self-test OK: co-presence-3 anchors (epoch-3 "
-          "campfire rule included), tier floors 2/6/14/30, display formatter, "
-          "socialites rule")
+    print("scoring_reference self-test OK: co-presence-4 anchors (the epoch-3 "
+          "campfire rule + the epoch-4 tier gate included), tier floors "
+          "2/6/14/30, display formatter, socialites rule")
 
 
 if __name__ == "__main__":

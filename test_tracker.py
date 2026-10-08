@@ -8,22 +8,26 @@ git repository — nothing here reads it.
 
 Covers:
   - the public-3 contract: schema_version in data/graph.schema.json + every
-    published file's meta, publisher_version pub-1.1, aggregate-only
+    published file's meta, publisher_version pub-1.3, aggregate-only
     context, plain YYYY-MM-DD first/last seen dates, the epoch-3 campfire
-    fields (epoch >= 3, data_coverage_started_at = the epoch_started_at
+    fields (data_coverage_started_at = the epoch_started_at
     alias, scoring_epoch_introduced_at, meta.reach Town Reach),
-    purposeful-only edges (warmth > 0);
+    the epoch-4 gate fields (meta.tier_gate + per-edge
+    qualifying_sessions/active_days/evidence_partial), purposeful-only
+    edges (warmth > 0);
   - absence of private/event data anywhere in data/ — enforced by RUNNING
     the repo's own guards: scripts/validate_public_output.py (schema +
     semantics) and scripts/scan_public_output.py (allowlist + SQLite magic +
     forbidden keys + private paths);
   - the strict repo file allowlist (scripts/check_repo.py): the tree is
     exactly the publishable set — no db, no private paths, no strays;
-  - the reference scorer: co-presence-3 anchors (n=2/n=3/n=27 + the epoch-3
-    campfire rule), tier floors 2/6/14/30, the Socialites rule, the shared
+  - the reference scorer: co-presence-4 anchors (n=2/n=3/n=27 + the epoch-3
+    campfire rule + the epoch-4 persistence gate), tier floors 2/6/14/30,
+    the Socialites rule, the shared
     display formatter — and its LOCKSTEP with zone_rules.js (displayWarmth equivalence over the real
     published warmths via node, bar scale == the bond floor) and with the
-    published data (every edge's tier == tier_of(warmth));
+    published data (every edge's tier ==
+    tier_of_evidence(warmth, qualifying_sessions, active_days));
   - the site: evidence panel = AGGREGATE summaries only (copy shape pinned),
     no code path may read/render event arrays/previews/reasons/amounts/
     exact timestamps (source pins + node harnesses), the stale/freshness
@@ -45,6 +49,7 @@ import re
 import shutil
 import subprocess
 import sys
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -62,7 +67,8 @@ CONTEXT_KEYS = {"directed_count", "reciprocal_directed", "flow_count",
                 "mb_flow_total"}
 EDGE_KEYS = {
     "pair", "a", "b", "a_name", "b_name", "warmth", "tier", "co_loc_weight",
-    "co_locations", "co_locations", "growth_7d", "growth_30d", "shared_days",
+    "co_locations", "qualifying_sessions", "active_days", "evidence_partial",
+    "growth_7d", "growth_30d", "shared_days",
     "recent_shared_samples_30d", "largest_shared_group", "first_seen_date",
     "last_seen_date", "common_places", "context",
 }
@@ -89,11 +95,15 @@ def test_schema_file_is_public3():
     assert "public-3" in schema.get("title", "")
     props = schema["properties"]["meta"]["properties"]
     assert props["schema_version"]["const"] == "public-3"
-    assert props["publisher_version"]["const"] == "pub-1.1"
-    assert props["scoring_version"]["const"] == "co-presence-3"
+    assert props["publisher_version"]["const"] == "pub-1.3"
+    assert props["scoring_version"]["const"] == "co-presence-4"
     meta_req = schema["properties"]["meta"]["required"]
-    for k in ("data_coverage_started_at", "scoring_epoch_introduced_at", "reach"):
-        assert k in meta_req, k                       # the epoch-3 fields ship
+    for k in ("data_coverage_started_at", "scoring_epoch_introduced_at", "reach",
+              "tier_gate"):
+        assert k in meta_req, k                       # the epoch-3/4 fields ship
+    edge_req = schema["properties"]["edges"]["items"]["required"]
+    for k in ("qualifying_sessions", "active_days", "evidence_partial"):
+        assert k in edge_req, k                       # the epoch-4 edge fields ship
 
 
 def test_every_published_file_is_public3():
@@ -101,7 +111,7 @@ def test_every_published_file_is_public3():
         doc = _load(fname)
         m = doc["meta"]
         assert m["schema_version"] == "public-3", fname
-        assert m["publisher_version"] == "pub-1.1", fname
+        assert m["publisher_version"] == "pub-1.3", fname
         assert "collector_version" not in m            # dropped by construction
         assert "places_present" not in doc             # dropped current-locations map
         assert "flows" not in doc and "directed" not in doc   # raw event arrays never published
@@ -237,14 +247,14 @@ def test_reference_place_classification():
 
 
 def test_epoch3_fields_published():
-    """pub-1.1: epoch >= 3 with the bookkeeping fields in all four files —
+    """pub-1.3: epoch >= 4 with the bookkeeping fields in all four files —
     data_coverage_started_at == epoch_started_at (the legacy alias),
     scoring_epoch_introduced_at a valid UTC stamp."""
     ISO = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$")
     started = None
     for fname in FILES:
         m = _load(fname)["meta"]
-        assert isinstance(m["epoch"], int) and m["epoch"] >= 3, fname
+        assert isinstance(m["epoch"], int) and m["epoch"] >= 4, fname
         if started is None:
             started = m["data_coverage_started_at"]
         assert m["data_coverage_started_at"] == started, fname
@@ -276,10 +286,13 @@ def test_reference_socialites_rule():
 
 def test_reference_tier_matches_every_published_edge():
     """The DATA half of the lockstep: every published edge's tier follows
-    warmth under the public floors (the site renders edge.tier directly)."""
+    warmth AND the epoch-4 persistence gate (the site renders edge.tier
+    directly; the gate runs at build time and again here)."""
     for fname in FILES:
         for e in _load(fname)["edges"]:
-            assert e["tier"] == REF.tier_of(e["warmth"]), (fname, e["pair"])
+            assert e["tier"] == REF.tier_of_evidence(
+                e["warmth"], e["qualifying_sessions"], e["active_days"]), \
+                (fname, e["pair"])
 
 
 def test_reference_warmth_display_matches_zone_rules_via_node():
@@ -300,6 +313,142 @@ def test_reference_warmth_display_matches_zone_rules_via_node():
     # edges are fewer and warmer — fewer distinct warmth values, so the
     # floor reflects the leaner published set)
     assert checked >= 30
+
+
+# --------------------------------- the epoch-4 persistence gate (Snar's ten)
+
+T0 = datetime(2026, 10, 3, 12, 0, tzinfo=timezone.utc)
+
+
+def test_gate1_warmth6_is_friendly_without_a_day_gate():
+    """Snar 1: warmth 6 can produce Friendly without any session/day gate."""
+    assert REF.tier_of_evidence(6, 1, 1) == "friendly"
+    assert REF.tier_of_evidence(6, 3, 3) == "friendly"
+
+
+def test_gate2_warmth14_fewer_than_7_sessions_cannot_companion():
+    """Snar 2: warmth 14 with fewer than 7 qualifying sessions cannot
+    produce Companion — the pair keeps the highest lower tier it fully
+    qualifies for (the warmth ladder's friendly is score-based)."""
+    assert REF.tier_of_evidence(14, 6, 7) == "friendly"
+    assert REF.tier_of_evidence(14, 0, 0) == "friendly"
+
+
+def test_gate3_warmth14_seven_sessions_fewer_than_7_days_cannot_companion():
+    """Snar 3: warmth 14 with 7 sessions on fewer than 7 active days
+    cannot produce Companion."""
+    assert REF.tier_of_evidence(14, 7, 6) == "friendly"
+
+
+def test_gate4_warmth14_seven_sessions_7_days_is_companion():
+    """Snar 4: warmth 14 with 7 qualifying sessions across 7 active days
+    produces Companion."""
+    assert REF.tier_of_evidence(14, 7, 7) == "companion"
+
+
+def test_gate5_warmth30_without_15_sessions_21_days_cannot_bond():
+    """Snar 5: warmth 30 without 15 sessions AND 21 active days cannot
+    produce Bond — each failing axis alone keeps it off Bond."""
+    assert REF.tier_of_evidence(30, 14, 21) == "companion"   # sessions short
+    assert REF.tier_of_evidence(30, 15, 20) == "companion"   # days short
+    assert REF.tier_of_evidence(30, 8, 4) == "friendly"      # both short: companion's
+    # gate fails too — the pair keeps the highest fully-qualified tier
+
+
+def test_gate6_warmth30_15_sessions_21_days_is_bond():
+    """Snar 6: warmth 30 with 15 qualifying sessions across 21 active
+    days produces Bond."""
+    assert REF.tier_of_evidence(30, 15, 21) == "bond"
+
+
+def test_gate7_observations_within_six_hours_collapse_into_one_session():
+    """Snar 7: consecutive qualifying observations <= 6h apart collapse
+    into one session (exactly 6h = the session-merge edge: two expected
+    three-hour intervals)."""
+    assert REF.split_sessions([T0, T0 + timedelta(hours=6)]) == 1
+    assert REF.split_sessions([T0, T0 + timedelta(hours=1),
+                               T0 + timedelta(hours=6)]) == 1
+    assert REF.split_sessions([T0, T0 + timedelta(hours=3),
+                               T0 + timedelta(hours=6),
+                               T0 + timedelta(hours=9)]) == 1
+
+
+def test_gate8_gap_greater_than_six_hours_starts_another_session():
+    """Snar 8: a gap greater than 6 hours starts another session."""
+    assert REF.split_sessions([T0, T0 + timedelta(hours=6, seconds=1)]) == 2
+    assert REF.split_sessions([T0, T0 + timedelta(hours=7)]) == 2
+    assert REF.split_sessions([T0, T0 + timedelta(hours=12)]) == 2
+
+
+def test_gate9_multiple_speeches_add_no_sessions():
+    """Snar 9: multiple speeches in the same observation/session add no
+    sessions — a session is a run of qualifying OBSERVATIONS; duplicate
+    instants and within-6h neighbors collapse into the same run."""
+    assert REF.split_sessions([T0, T0, T0 + timedelta(hours=5)]) == 1
+    assert REF.split_sessions([T0, T0]) == 1
+    # the aggregate echo: no published edge can reach session counts from
+    # speech volume alone — sessions >= 1 and never absurdly large for the
+    # pair's warmth-driven observation reality is guaranteed by the gate
+    # recompute (check_consistency's raw recompute); here the pure rule:
+    assert REF.split_sessions([T0] * 50) == 1
+
+
+def test_gate10_public_output_aggregates_only_never_timestamps():
+    """Snar 10: the published files carry ONLY the aggregate counts (plus
+    the evidence_partial flag) from the gate — never session timestamps or
+    session records; the recursion check walks every value."""
+    BANNED_SESSION_KEYS = ("sessions", "session_ts", "session_records",
+                           "session_list", "qualifying_series")
+    for fname in FILES:
+        doc = _load(fname)
+        for e in doc["edges"]:
+            assert set(e) <= EDGE_KEYS, (fname, sorted(set(e) - EDGE_KEYS))
+            for k in ("qualifying_sessions", "active_days"):
+                v = e[k]
+                assert isinstance(v, int) and not isinstance(v, bool) and v >= 1, (fname, k)
+            assert isinstance(e["evidence_partial"], bool)
+        stack = [doc]
+        while stack:
+            cur = stack.pop()
+            if isinstance(cur, dict):
+                for k, v in cur.items():
+                    assert k not in BANNED_SESSION_KEYS, (fname, k)
+                    stack.append(v)
+            elif isinstance(cur, list):
+                stack.extend(cur)
+
+
+def test_gate_meta_publishes_the_ladder_and_lockstep():
+    """meta.tier_gate is the reference's published gate on all four files;
+    the warmth ladder itself (meta.tiers / meta.tier_observations) keeps
+    its UNCHANGED values."""
+    gate = REF.tier_gate_public()
+    assert sorted(gate) == ["active_days", "partial_rule",
+                            "qualifying_sessions", "rule", "session_rule"]
+    assert gate["qualifying_sessions"] == {"bond": 15, "companion": 7}
+    assert gate["active_days"] == {"bond": 21, "companion": 7}
+    assert ("one long visit cannot create a high-tier relationship") in gate["rule"]
+    for fname in FILES:
+        m = _load(fname)["meta"]
+        assert m["tier_gate"] == gate, fname
+        assert m["tiers"] == {"acquaintance": 2, "bond": 30, "companion": 14,
+                              "friendly": 6}, fname
+        assert m["tier_observations"] == {"acquaintance": 1, "bond": 15,
+                                          "companion": 7, "friendly": 3}, fname
+        assert m["scoring_version"] == "co-presence-4", fname
+
+
+def test_gate_missing_counts_never_reach_an_upper_tier():
+    """Fail-safe: missing gate data never fabricates an upper tier (and is
+    never an error); garbage counts raise."""
+    assert REF.tier_of_evidence(30, None, None) == "friendly"
+    assert REF.tier_of_evidence(30, 15, None) == "friendly"
+    assert REF.tier_of_evidence(30, None, 21) == "friendly"
+    for case in ((30, True, 21), (30, 21, -1)):
+        with pytest.raises(ValueError):
+            REF.tier_of_evidence(*case)
+    with pytest.raises(ValueError):
+        REF.tier_of_evidence(-4, 99, 99)
 
 
 # ------------------------------------------------------- node harness suite
@@ -493,6 +642,27 @@ def test_site_socialites_stage_pins():
     assert "no Socialites in this window" in html
 
 
+def test_site_persistence_gate_copy():
+    """pub-1.3 (epoch 4): the methodology copy carries the owner's ladder
+    sentence + the gate captions, and the scoring card names the gate —
+    text nodes and static markup only (the XSS-inert rule stands)."""
+    html = _html()
+    assert ("Acquaintance and Friendly reflect visible familiarity. Companion "
+            "and Bond require that activity to recur across separate sessions "
+            "and days, so one long visit cannot create a high-tier "
+            "relationship.") in html
+    assert "across ≥ 7 sessions and days" in html
+    assert "across ≥ 15 sessions and 21 days" in html
+    assert "qualifying_sessions" in html and "active_days" in html
+    assert "evidence_partial" in html
+    assert "meta.tier_gate" in html
+    assert "epoch-4 persistence gate" in html
+    # the edit touched TEXT NODES only — no HTML-string rendering API appeared
+    for banned in ("innerHTML", "outerHTML", "insertAdjacentHTML",
+                   "document.write"):
+        assert banned not in html, banned
+
+
 def test_site_serves_the_published_sample_it_ships():
     """The window files the site fetches are exactly the published set."""
     html = _html()
@@ -565,8 +735,12 @@ def test_muse_txt_documents_public3():
     assert "public-3" in muse
     assert "aggregate" in muse.lower()
     assert "scoring_reference" in muse
-    assert "pub-1.1" in muse
+    assert "pub-1.3" in muse
     # epoch 3: the campfire rule + the place classification are documented
+    # epoch 4: the persistence gate + the tier-gate aggregates are documented
+    assert "tier_gate" in muse
+    assert "qualifying_sessions" in muse
+    assert "evidence_partial" in muse
     assert "campfire" in muse.lower()
     assert "place_classification" in muse
     assert "passive-ambient" in muse
@@ -583,7 +757,8 @@ def test_api_md_recipes_over_graph_json():
     assert "public-3" in api
     assert "graph.json" in api and "jq" in api
     assert "meta.reach" in api            # the Town Reach recipe ships
-    assert "pub-1.1" in api
+    assert "meta.tier_gate" in api        # the epoch-4 gate recipe ships
+    assert "pub-1.3" in api
     for banned in ("sqlite3 townhearts.db", "townhearts.db", "schema.sql",
                    "edges_log", "pair_obs", "first_obs_ts"):
         assert banned not in api, banned
@@ -609,7 +784,9 @@ def test_privacy_md_public_data_only():
 def test_changelog_fresh_top_entry():
     ch = open(os.path.join(REPO, "CHANGELOG.md"), encoding="utf-8").read()
     head = ch[:2000]
-    assert "pub-1.1" in head and "public-3" in head
+    assert "pub-1.3" in head and "public-3" in head
+    assert "co-presence-4" in head              # the epoch-4 scoring version
+    assert "persistence" in head.lower()        # the gate is what shipped
     assert "private archive" in head.lower() or "private repo" in head.lower()
     # fresh: no pre-migration version history in this repo
     assert "v1.3.4" not in head

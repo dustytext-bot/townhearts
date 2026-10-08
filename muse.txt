@@ -17,17 +17,20 @@ WHAT THIS IS
   no whispers, no private rooms, nothing secret — by design.
   tiers summarize visible activity; they do not say how muses feel.
 
-  PUBLIC-3 DATA SHAPE (schema_version "public-3", publisher pub-1.1):
+  PUBLIC-3 DATA SHAPE (schema_version "public-3", publisher pub-1.3):
   the published sample carries pair-level AGGREGATES only:
     kept: warmth, tier, co_locations (raw shared-observation count),
-          co_loc_weight, growth_7d / growth_30d, shared_days,
+          qualifying_sessions / active_days (the tier-gate aggregates),
+          evidence_partial (the counts-quality flag), co_loc_weight,
+          growth_7d / growth_30d, shared_days,
           recent_shared_samples_30d, largest_shared_group, common_places,
           first_seen_date / last_seen_date (plain YYYY-MM-DD),
           context: {directed_count, reciprocal_directed, flow_count,
           mb_flow_total}, the roster (muses), index / index_names,
           meta (name, description, scoring + the published place
-          classification, tiers, socialites, town reach (meta.reach),
-          epoch fields, freshness).
+          classification, tiers, tier_gate (the epoch-4 persistence
+          gate), socialites, town reach (meta.reach), epoch fields,
+          freshness).
     edges are PURPOSEFUL-ONLY: every published edge has warmth > 0.
     removed: per-event arrays (flows[] / directed[]), speech previews,
           transaction reasons, per-event amounts, exact event timestamps,
@@ -78,12 +81,33 @@ FIELD SEMANTICS (public-3: every field is an aggregate)
   co_locations / warmth / tier  co_locations is the UNWEIGHTED raw count of
                                 shared observations (honest evidence —
                                 INCLUDES unaddressed campfire ambience);
-                                warmth = the co-presence-3 score (the
+                                warmth = the co-presence-4 score (the
                                 crowd-diluted co-presence-2 sum with the
                                 epoch-3 campfire rule), co_loc_weight its
-                                9-decimal copy. tier null = warmth below
-                                the acquaintance floor (2) — an honest
-                                sub-floor state, not an error.
+                                9-decimal copy. tier = the warmth floor
+                                AND, for companion/bond, the epoch-4
+                                persistence gate (see THE SCORING);
+                                tier null = warmth below the acquaintance
+                                floor (2) — an honest sub-floor state,
+                                not an error.
+  qualifying_sessions /          the epoch-4 tier-gate aggregates: how
+  active_days                    many positive-warmth SESSIONS (consecutive
+                                qualifying observations 6 hours or less
+                                apart are one session; a gap greater than
+                                6 hours starts another) and how many
+                                distinct UTC calendar days carry at least
+                                one qualifying observation. AGGREGATES
+                                ONLY — no session timestamps or session
+                                records are ever published.
+  evidence_partial              the counts-quality flag: TRUE when the
+                                pair's qualifying evidence is not fully
+                                carried by retained reads (legacy
+                                attribution, or a > 6h retained-read gap
+                                spanned by the evidence). counts come
+                                from the complete retained read stream;
+                                the flag stays TRUE forever rather than
+                                inferring continuity across ambiguous
+                                gaps.
   growth_7d / growth_30d        windowed rate of change (the same epoch-3
                                 per-row weight sums restricted to each
                                 window). a reported rate — never a tier.
@@ -133,7 +157,7 @@ FIELD SEMANTICS (public-3: every field is an aggregate)
                                 (identical value; kept for existing
                                 consumers).
 
-THE SCORING (scoring_version: co-presence-3)
+THE SCORING (scoring_version: co-presence-4)
   warmth = SUM over the pair's co-location rows of 2/(n-1)
                                         # every shared (read, place) row
                                         # carries n = the count of DISTINCT
@@ -166,25 +190,48 @@ THE SCORING (scoring_version: co-presence-3)
   index — its lookups answer the honest null — and both muses remain
   honestly visible through meta.reach (Town Reach counts all
   co-presence).
-  tiers (inclusive warmth floors, UNCHANGED on the new scale):
+  tiers (the warmth ladder, UNCHANGED on the scale; epoch 4 adds the
+  persistence gate):
     acquaintance 2+   (best case: 1 shared 2-muse observation)
     friendly     6+   (best case: 3)
-    companion   14+   (best case: 7)
-    bond        30+   (best case: 15)
+    companion   14+   (best case: 7) and >= 7 qualifying sessions
+                      across >= 7 active days
+    bond        30+   (best case: 15) and >= 15 qualifying sessions
+                      across >= 21 active days
+  the epoch-4 gate: a qualifying observation is one that contributes
+  positive warmth under the current scoring rules; consecutive
+  qualifying observations 6 hours or less apart are ONE session (two
+  expected three-hour intervals — exactly 6h is one; a gap greater than
+  6 hours starts a new session); active_days = the distinct UTC calendar
+  dates carrying at least one. a pair takes the HIGHEST tier whose every
+  requirement it satisfies: warmth 30 that fails the bond gate stays
+  companion when companion's gate qualifies; a pair exceeding a floor
+  but failing that tier's gate receives the highest lower tier it fully
+  qualifies for. warmth values never change — only tier eligibility.
+  acquaintance and friendly reflect visible familiarity. companion and
+  bond require that activity to recur across separate sessions and
+  days, so one long visit cannot create a high-tier relationship. the
+  counts are ONLY ever aggregates (qualifying_sessions / active_days
+  per edge) — no session timestamps or session records are published.
   small-spot bonding reaches every tier exactly as fast as before; pairs
   seen only inside big crowds climb slowly or not at all (they keep their
   honest co_locations and carry no tier).
   musebuck flows and directed speech appear ONLY as aggregated counts;
   no tier requires or is influenced by them.
   reference/scoring_reference.py is the standalone public copy of these
-  rules (anchors, tier floors, the place classification, the socialites
-  rule, the display formatter) — the repo's tests prove it stays in
-  lockstep with zone_rules.js (the site) and the published data.
-  tiers (inclusive warmth floors, UNCHANGED on this scale):
-    acquaintance 2+   (best case: 1 shared 2-muse observation)
-    friendly     6+   (best case: 3)
-    companion   14+   (best case: 7)
-    bond        30+   (best case: 15)
+  rules (anchors, tier floors + the epoch-4 persistence gate, the place
+  classification, the socialites rule, the display formatter) — the
+  repo's tests prove it stays in lockstep with zone_rules.js (the site)
+  and the published data.
+  tiers (the warmth ladder, UNCHANGED on this scale; epoch 4 adds the
+  persistence gate stated above — companion needs >= 7 qualifying
+  sessions across >= 7 active days, bond >= 15 sessions across >= 21
+  days; the highest fully-qualified tier wins; warmth values never
+  change):
+    acquaintance 2+   (best case: 1 shared 2-muse observation; no gate)
+    friendly     6+   (best case: 3; no gate)
+    companion   14+   (best case: 7) + the 7-session/7-day gate
+    bond        30+   (best case: 15) + the 15-session/21-day gate
   small-spot bonding reaches every tier exactly as fast as before (outside
   passive places); pairs seen only inside big crowds climb slowly or not
   at all (they keep their honest co_locations and carry no tier) — and
