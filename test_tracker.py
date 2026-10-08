@@ -664,14 +664,14 @@ def test_site_socialites_stage_pins():
 
 
 def test_site_persistence_gate_copy():
-    """pub-1.3 (epoch 4): the methodology copy carries the owner's ladder
-    sentence + the gate captions, and the scoring card names the gate —
-    text nodes and static markup only (the XSS-inert rule stands)."""
+    """epoch 4: the gate explanation lives in the pair-evidence display and
+    the scoring card; the tiers-card ladder sentence was retired from the
+    homepage per owner call 2026-10-07 — text nodes and static markup only
+    (the XSS-inert rule stands)."""
     html = _html()
-    assert ("Acquaintance and Friendly reflect visible familiarity. Companion "
-            "and Bond require that activity to recur across separate sessions "
-            "and days, so one long visit cannot create a high-tier "
-            "relationship.") in html
+    # the retired tiers-card paragraph is gone and stays gone
+    assert "reflect visible familiarity" not in html
+    assert "one long visit cannot create a high-tier relationship" not in html
     assert "across ≥ 7 sessions and days" in html
     assert "across ≥ 15 sessions and 21 days" in html
     assert "qualifying_sessions" in html and "active_days" in html
