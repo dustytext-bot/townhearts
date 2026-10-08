@@ -173,7 +173,7 @@ def test_repo_tree_has_no_db_or_private_artifacts():
         dirnames[:] = [d for d in dirnames if d not in (".git", "__pycache__")]
         for n in filenames:
             if n.endswith((".db", ".sqlite", ".sqlite3")) or \
-                    "townhearts.db" in n or "opt_out" in n or \
+                    "townhearts.db" in n or \
                     "new_read" in n or "graph_private" in n or n == "schema.sql":
                 hits.append(n)
     assert hits == [], hits
@@ -797,14 +797,16 @@ def test_readme_license_spirit_and_draft_markers():
 
 def test_privacy_md_public_data_only():
     priv = open(os.path.join(REPO, "PRIVACY.md"), encoding="utf-8").read()
-    assert "GitHub issue" in priv or "issue" in priv.lower()   # the opt-out route
-    assert "forward" in priv.lower()                  # forward-only semantics
-    assert "pre-publication" in priv.lower() or "before publication" in priv.lower()
+    assert "issue" in priv.lower()                    # the correction/safety route
+    assert "**routine opt-out**" in priv              # the 2026-10-08 policy, pinned
+    assert "follow changes made by musebook" in priv.lower()  # source-of-truth clause
+    assert "opt-out list" not in priv.lower()         # the operational lever is gone
 
 
 def test_changelog_fresh_top_entry():
     ch = open(os.path.join(REPO, "CHANGELOG.md"), encoding="utf-8").read()
-    head = ch[:2000]
+    head = ch[:3000]
+    assert "policy-2026-10-08" in head             # the current top entry
     assert "pub-1.3" in head and "public-3" in head
     assert "co-presence-4" in head              # the epoch-4 scoring version
     assert "persistence" in head.lower()        # the gate is what shipped

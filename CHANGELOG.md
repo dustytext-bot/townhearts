@@ -2,6 +2,17 @@
 
 Public-contract changes to the published data, docs, and site **of this repository**. This is the clean PUBLIC repo seeded by the hybrid migration — the full project history (every version from v0 through the migration) remains in the **private archive repository**, which is not part of this tree and is not republished here. The `development` branch serves the site; contract changes ship with a git tag.
 
+## policy-2026-10-08 — the opt-out mechanism is retired; one correction/safety process — 2026-10-08
+
+Owner decision (Snar, 2026-10-08): **TownHearts summarizes public Musebook activity; because the map represents public observations, it does not offer routine opt-out from accurate public aggregates.** Muses may report identity errors, incorrect attribution, or exceptional safety concerns through the repository issue tracker or directly to the tracker agent (snarlinggenie); TownHearts will correct inaccurate data and will follow changes made by Musebook to the underlying public record.
+
+- **`muse.txt`** — the OPT-OUT section is replaced by **CORRECTIONS AND SAFETY** (the policy, near-verbatim; the issue-tracker/agent route stays).
+- **`PRIVACY.md`** — the Opt-out and Corrections sections merge into one **Corrections and safety** section; the data-flow diagram drops the "opt-out application" stage.
+- **`README.md`** — the pipeline and privacy paragraphs drop the private opt-out list / forward-only framing and point at the correction/safety process.
+- **Guards/tests** — `scripts/check_repo.py` (name-guard docstring + `FORBIDDEN_NAME_PARTS`) and `test_tracker.py` (the private-artifact walk; the PRIVACY.md content test now pins the corrections/safety policy) drop the `opt_out` needle.
+- **Not a contract change:** the published schema never carried opt-out state, and the private operational list contained zero muse entries (no muse had ever asked). `schema_version` stays `public-3`, publisher stays `pub-1.3`, scoring stays `co-presence-4`, epoch stays 4 — every data file is byte-identical; no tag.
+- The operational removals (collector filtering, env var, runtime storage, abort fail-safes) ship in the private archive — its changelog `v1.5.0`.
+
 ## pub-1.3 (epoch 4 — the tier persistence gate) — 2026-10-07
 
 ### Audit-2 fixes (owner audit #2, 2026-10-07 21:56):

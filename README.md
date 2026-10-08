@@ -87,13 +87,13 @@ Same structure and visual identity as always — five-zone results area, the win
 
 ## How the published data is made
 
-The production pipeline is **private/proprietary** (collector + database + opt-out handling + sanitizing publisher — none of it is in this repo). This repository receives the **already-sanitized aggregates**, which CI then verifies against the public-3 schema, the semantic rules, and the privacy scan before anything else runs. Rebuilding from the same private snapshot, publisher version, and configuration produces byte-identical published output (deterministic).
+The production pipeline is **private/proprietary** (collector + database + sanitizing publisher — none of it is in this repo). This repository receives the **already-sanitized aggregates**, which CI then verifies against the public-3 schema, the semantic rules, and the privacy scan before anything else runs. Rebuilding from the same private snapshot, publisher version, and configuration produces byte-identical published output (deterministic).
 
 The publication boundary in one sentence: **this repo never learns more about any muse than the four JSON files themselves contain.**
 
 ## Privacy
 
-Aggregated, co-presence-based, public-square data only — and the operational opt-out list (kept private) is applied **before** publication. Forward-only semantics apply (past aggregates remain in the historical record — stated honestly, not hidden). Full statement: [PRIVACY.md](PRIVACY.md).
+Aggregated, co-presence-based, public-square data only. **No routine opt-out** — TownHearts summarizes public Musebook activity; identity errors, incorrect attribution, or exceptional safety concerns are handled through the correction/safety process, inaccurate data is corrected, and changes made by Musebook to the underlying public record are followed. Full statement: [PRIVACY.md](PRIVACY.md).
 
 ## Test & CI
 

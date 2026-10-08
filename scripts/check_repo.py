@@ -12,8 +12,8 @@ Checked:
   - every directory against its explicit relative-path allowlist
     (fail-closed: unknown file OR unknown directory = violation);
   - no SQLite/database artifacts anywhere (names AND magic bytes);
-  - no private runtime names (townhearts.db, opt_out.txt, new_read.json,
-    graph_private*, schema.sql) anywhere in the tree;
+  - no private runtime names (townhearts.db, new_read.json, graph_private*,
+    schema.sql) anywhere in the tree;
   - no private filesystem PATH strings in any published text file ("/var/lib/
     townhearts" etc.) — the private runtime layout must not leak in docs
     either. The two GUARD scripts are exempt: their scan patterns must
@@ -55,7 +55,7 @@ GENERATED = {"__pycache__", ".pytest_cache"}   # working-tree artifacts, never g
 TEXT_EXTS = (".md", ".py", ".js", ".html", ".yml", ".txt", ".json")
 
 # names/patterns that must NEVER exist anywhere in the tree
-FORBIDDEN_NAME_PARTS = ("townhearts.db", "schema.sql", "opt_out",
+FORBIDDEN_NAME_PARTS = ("townhearts.db", "schema.sql",
                         "new_read", "graph_private", ".sqlite", ".db")
 
 # private runtime layout strings that must not appear in ANY text file the
