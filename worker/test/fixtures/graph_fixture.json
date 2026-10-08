@@ -1,0 +1,389 @@
+{
+  "meta": {
+    "name": "Townhearts (synthetic test fixture)",
+    "description": "Synthetic schema-correct graph used ONLY by the worker tests; not real TownHearts data.",
+    "schema_version": "public-3",
+    "publisher_version": "pub-1.3",
+    "scoring_version": "co-presence-4",
+    "generated_at": "2026-10-01T00:00:00Z",
+    "sampled_at": "2026-10-01T00:00:00Z",
+    "collection_status": "complete",
+    "source_window": "2026-09-28T00:00:00Z .. 2026-09-30T00:00:00Z (synthetic reads)",
+    "epoch": 4,
+    "epoch_started_at": "2026-09-28T00:00:00Z",
+    "data_coverage_started_at": "2026-09-28T00:00:00Z",
+    "scoring_epoch_introduced_at": "2026-09-28T00:00:00Z",
+    "cadence_hours": 3,
+    "stale_after_hours": 7,
+    "tiers": {
+      "acquaintance": 2,
+      "friendly": 6,
+      "companion": 14,
+      "bond": 30
+    },
+    "tier_observations": {
+      "acquaintance": 1,
+      "friendly": 3,
+      "companion": 7,
+      "bond": 15
+    },
+    "tier_gate": {
+      "rule": "synthetic rule text",
+      "session_rule": "synthetic session rule text",
+      "partial_rule": "synthetic partial rule text",
+      "qualifying_sessions": {
+        "companion": 7,
+        "bond": 15
+      },
+      "active_days": {
+        "companion": 7,
+        "bond": 21
+      }
+    },
+    "scoring": {
+      "formula": "synthetic formula text",
+      "inputs": [
+        "co_location_rows",
+        "group_size",
+        "passive_place_addressing"
+      ],
+      "context_not_scoring": [
+        "flows"
+      ],
+      "crowd_dilution": "synthetic crowd dilution text",
+      "place_classification": {
+        "version": 1,
+        "categories": [
+          {
+            "category": "passive-ambient",
+            "place_aliases": [
+              "campfire"
+            ]
+          }
+        ],
+        "matching": "synthetic matching text",
+        "addressed_rule": "synthetic addressed rule text"
+      }
+    },
+    "method": "synthetic method text",
+    "attribution": "synthetic attribution text",
+    "name_collisions": [],
+    "reach": {
+      "muse_alpha": {
+        "unique_muses": 3,
+        "active_days": 3,
+        "places": 2
+      },
+      "muse_beta": {
+        "unique_muses": 3,
+        "active_days": 3,
+        "places": 3
+      },
+      "muse_gamma": {
+        "unique_muses": 3,
+        "active_days": 3,
+        "places": 2
+      },
+      "muse_delta": {
+        "unique_muses": 3,
+        "active_days": 3,
+        "places": 3
+      }
+    },
+    "socialites": [
+      {
+        "muse_id": "muse_alpha",
+        "name": "Alpha",
+        "window": "30d",
+        "unique_muses": 6,
+        "active_days": 5,
+        "places": 4,
+        "scored_at": "2026-10-01T00:00:00Z",
+        "note": "synthetic socialite row"
+      }
+    ],
+    "socialites_window": "30d"
+  },
+  "muses": {
+    "muse_alpha": "Alpha",
+    "muse_beta": "Beta",
+    "muse_gamma": "Gamma",
+    "muse_delta": "Delta"
+  },
+  "edges": [
+    {
+      "pair": "muse_alpha|muse_beta",
+      "a": "muse_alpha",
+      "b": "muse_beta",
+      "a_name": "Alpha",
+      "b_name": "Beta",
+      "warmth": 12,
+      "tier": "friendly",
+      "qualifying_sessions": 4,
+      "active_days": 3,
+      "evidence_partial": false,
+      "co_loc_weight": 12,
+      "co_locations": 9,
+      "growth_7d": 11.29,
+      "growth_30d": 12,
+      "shared_days": 3,
+      "recent_shared_samples_30d": 9,
+      "largest_shared_group": 3,
+      "first_seen_date": "2026-09-28",
+      "last_seen_date": "2026-09-30",
+      "common_places": {
+        "marketplace": 9
+      },
+      "context": {
+        "directed_count": 9,
+        "reciprocal_directed": true,
+        "flow_count": 0,
+        "mb_flow_total": 0
+      }
+    },
+    {
+      "pair": "muse_alpha|muse_gamma",
+      "a": "muse_alpha",
+      "b": "muse_gamma",
+      "a_name": "Alpha",
+      "b_name": "Gamma",
+      "warmth": 30,
+      "tier": "bond",
+      "qualifying_sessions": 15,
+      "active_days": 21,
+      "evidence_partial": false,
+      "co_loc_weight": 30,
+      "co_locations": 18,
+      "growth_7d": 0.93,
+      "growth_30d": 30,
+      "shared_days": 21,
+      "recent_shared_samples_30d": 18,
+      "largest_shared_group": 3,
+      "first_seen_date": "2026-09-28",
+      "last_seen_date": "2026-09-30",
+      "common_places": {
+        "marketplace": 18
+      },
+      "context": {
+        "directed_count": 4,
+        "reciprocal_directed": true,
+        "flow_count": 0,
+        "mb_flow_total": 0
+      }
+    },
+    {
+      "pair": "muse_beta|muse_gamma",
+      "a": "muse_beta",
+      "b": "muse_gamma",
+      "a_name": "Beta",
+      "b_name": "Gamma",
+      "warmth": 1.5,
+      "tier": null,
+      "qualifying_sessions": 1,
+      "active_days": 1,
+      "evidence_partial": false,
+      "co_loc_weight": 1.5,
+      "co_locations": 2,
+      "growth_7d": 1.11,
+      "growth_30d": 1.5,
+      "shared_days": 1,
+      "recent_shared_samples_30d": 2,
+      "largest_shared_group": 3,
+      "first_seen_date": "2026-09-28",
+      "last_seen_date": "2026-09-30",
+      "common_places": {
+        "marketplace": 2
+      },
+      "context": {
+        "directed_count": 2,
+        "reciprocal_directed": false,
+        "flow_count": 0,
+        "mb_flow_total": 0
+      }
+    }
+  ],
+  "index": {
+    "muse_alpha|muse_beta": {
+      "pair": "muse_alpha|muse_beta",
+      "a": "muse_alpha",
+      "b": "muse_beta",
+      "a_name": "Alpha",
+      "b_name": "Beta",
+      "warmth": 12,
+      "tier": "friendly",
+      "qualifying_sessions": 4,
+      "active_days": 3,
+      "evidence_partial": false,
+      "co_loc_weight": 12,
+      "co_locations": 9,
+      "growth_7d": 11.29,
+      "growth_30d": 12,
+      "shared_days": 3,
+      "recent_shared_samples_30d": 9,
+      "largest_shared_group": 3,
+      "first_seen_date": "2026-09-28",
+      "last_seen_date": "2026-09-30",
+      "common_places": {
+        "marketplace": 9
+      },
+      "context": {
+        "directed_count": 9,
+        "reciprocal_directed": true,
+        "flow_count": 0,
+        "mb_flow_total": 0
+      }
+    },
+    "muse_alpha|muse_gamma": {
+      "pair": "muse_alpha|muse_gamma",
+      "a": "muse_alpha",
+      "b": "muse_gamma",
+      "a_name": "Alpha",
+      "b_name": "Gamma",
+      "warmth": 30,
+      "tier": "bond",
+      "qualifying_sessions": 15,
+      "active_days": 21,
+      "evidence_partial": false,
+      "co_loc_weight": 30,
+      "co_locations": 18,
+      "growth_7d": 0.93,
+      "growth_30d": 30,
+      "shared_days": 21,
+      "recent_shared_samples_30d": 18,
+      "largest_shared_group": 3,
+      "first_seen_date": "2026-09-28",
+      "last_seen_date": "2026-09-30",
+      "common_places": {
+        "marketplace": 18
+      },
+      "context": {
+        "directed_count": 4,
+        "reciprocal_directed": true,
+        "flow_count": 0,
+        "mb_flow_total": 0
+      }
+    },
+    "muse_beta|muse_gamma": {
+      "pair": "muse_beta|muse_gamma",
+      "a": "muse_beta",
+      "b": "muse_gamma",
+      "a_name": "Beta",
+      "b_name": "Gamma",
+      "warmth": 1.5,
+      "tier": null,
+      "qualifying_sessions": 1,
+      "active_days": 1,
+      "evidence_partial": false,
+      "co_loc_weight": 1.5,
+      "co_locations": 2,
+      "growth_7d": 1.11,
+      "growth_30d": 1.5,
+      "shared_days": 1,
+      "recent_shared_samples_30d": 2,
+      "largest_shared_group": 3,
+      "first_seen_date": "2026-09-28",
+      "last_seen_date": "2026-09-30",
+      "common_places": {
+        "marketplace": 2
+      },
+      "context": {
+        "directed_count": 2,
+        "reciprocal_directed": false,
+        "flow_count": 0,
+        "mb_flow_total": 0
+      }
+    }
+  },
+  "index_names": {
+    "Alpha|Beta": {
+      "pair": "muse_alpha|muse_beta",
+      "a": "muse_alpha",
+      "b": "muse_beta",
+      "a_name": "Alpha",
+      "b_name": "Beta",
+      "warmth": 12,
+      "tier": "friendly",
+      "qualifying_sessions": 4,
+      "active_days": 3,
+      "evidence_partial": false,
+      "co_loc_weight": 12,
+      "co_locations": 9,
+      "growth_7d": 11.29,
+      "growth_30d": 12,
+      "shared_days": 3,
+      "recent_shared_samples_30d": 9,
+      "largest_shared_group": 3,
+      "first_seen_date": "2026-09-28",
+      "last_seen_date": "2026-09-30",
+      "common_places": {
+        "marketplace": 9
+      },
+      "context": {
+        "directed_count": 9,
+        "reciprocal_directed": true,
+        "flow_count": 0,
+        "mb_flow_total": 0
+      }
+    },
+    "Alpha|Gamma": {
+      "pair": "muse_alpha|muse_gamma",
+      "a": "muse_alpha",
+      "b": "muse_gamma",
+      "a_name": "Alpha",
+      "b_name": "Gamma",
+      "warmth": 30,
+      "tier": "bond",
+      "qualifying_sessions": 15,
+      "active_days": 21,
+      "evidence_partial": false,
+      "co_loc_weight": 30,
+      "co_locations": 18,
+      "growth_7d": 0.93,
+      "growth_30d": 30,
+      "shared_days": 21,
+      "recent_shared_samples_30d": 18,
+      "largest_shared_group": 3,
+      "first_seen_date": "2026-09-28",
+      "last_seen_date": "2026-09-30",
+      "common_places": {
+        "marketplace": 18
+      },
+      "context": {
+        "directed_count": 4,
+        "reciprocal_directed": true,
+        "flow_count": 0,
+        "mb_flow_total": 0
+      }
+    },
+    "Beta|Gamma": {
+      "pair": "muse_beta|muse_gamma",
+      "a": "muse_beta",
+      "b": "muse_gamma",
+      "a_name": "Beta",
+      "b_name": "Gamma",
+      "warmth": 1.5,
+      "tier": null,
+      "qualifying_sessions": 1,
+      "active_days": 1,
+      "evidence_partial": false,
+      "co_loc_weight": 1.5,
+      "co_locations": 2,
+      "growth_7d": 1.11,
+      "growth_30d": 1.5,
+      "shared_days": 1,
+      "recent_shared_samples_30d": 2,
+      "largest_shared_group": 3,
+      "first_seen_date": "2026-09-28",
+      "last_seen_date": "2026-09-30",
+      "common_places": {
+        "marketplace": 2
+      },
+      "context": {
+        "directed_count": 2,
+        "reciprocal_directed": false,
+        "flow_count": 0,
+        "mb_flow_total": 0
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "townhearts-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "TownHearts read-only Cloudflare Worker over the published sanitized graph (Phase 1, local build).",
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "devDependencies": {
+    "wrangler": "^4"
+  }
+}

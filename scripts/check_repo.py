@@ -49,9 +49,15 @@ DIR_ALLOWLIST: dict[str, tuple[str, ...]] = {
                     "render_check.js", "scoring_equiv_check.js",
                     "showcase_check.js", "window_check.js", "zone_check.js",
                     "xss_fixture.json"),
+    "worker": ("package.json", "wrangler.toml",
+               "src/index.js",
+               "test/harness.js", "test/worker.test.js",
+               "test/fixtures/make_fixture.js",
+               "test/fixtures/graph_fixture.json"),
 }
 
-GENERATED = {"__pycache__", ".pytest_cache"}   # working-tree artifacts, never git
+GENERATED = {"__pycache__", ".pytest_cache", "node_modules"}   # working-tree
+# artifacts, never git (node_modules is the worker/ npm install target)
 TEXT_EXTS = (".md", ".py", ".js", ".html", ".yml", ".txt", ".json")
 
 # names/patterns that must NEVER exist anywhere in the tree

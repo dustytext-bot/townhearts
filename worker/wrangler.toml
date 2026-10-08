@@ -1,0 +1,24 @@
+# TownHearts agent-data Worker — Phase 1 local build.
+#
+# Read-only Cloudflare Worker over the published sanitized graph.
+# Free plan only: Workers + one Analytics Engine dataset (writeDataPoint
+# only; metrics are viewed in the dashboard — no query binding).
+# No KV. No paid services. No custom domain (workers.dev preview URL).
+#
+# Deployment (Phase 2, OWNER runs with browser OAuth — `wrangler login`):
+#   cd worker && npx wrangler deploy
+# See the Phase 2 checklist in the builder report for rollback.
+
+name = "townhearts-agent-api"
+main = "src/index.js"
+compatibility_date = "2026-10-08"
+
+[vars]
+# Optional override of the canonical origin; default is hardcoded in
+# src/index.js (the GitHub Pages graph.json) and the static fallback URL
+# reported by /v1/status always stays the canonical GitHub Pages copy.
+# ORIGIN_DATA_URL = "https://dustytext-bot.github.io/townhearts/data/graph.json"
+
+[[analytics_engine_datasets]]
+binding = "TOWNHEARTS_METRICS"
+dataset = "townhearts_agent_api"

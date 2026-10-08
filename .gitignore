@@ -18,3 +18,5 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .DS_Store
+# worker/ npm working tree (never committed)
+node_modules/
