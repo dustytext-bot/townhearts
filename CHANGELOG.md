@@ -4,6 +4,12 @@ Public-contract changes to the published data, docs, and site **of this reposito
 
 ## pub-1.3 (epoch 4 — the tier persistence gate) — 2026-10-07
 
+### Audit-2 fixes (owner audit #2, 2026-10-07 21:56):
+- the session walk now VOUCHES every boundary against the retained read stream: a >6h gap starts a session only when a retained read falls inside it; unvouched (outage) gaps merge and flag evidence_partial — the session count is a LOWER bound and can never be inflated by pipeline outages, so an ambiguous gap unlocks nothing
+- the pair lookup now displays recurrence (qualifying sessions / active days + the lower-bound note) so gated-tier progress is visible
+- requirements-dev.txt added (pytest; numpy only for scripts/beat-analyze); the README gains the install line
+- validator path defaults are repo-relative (no machine paths in source)
+
 Tag: `pub-1.3`. Scoring version `co-presence-3` → **`co-presence-4`** (meta.epoch → **4**); schema stays **`public-3`**; the publisher bumps `pub-1.1` → `pub-1.3` (pub-1.2 was the site-only rev — data byte-identical through it). Owner spec (2026-10-07): keep Acquaintance and Friendly accessible while one prolonged interaction or frequent polling can no longer produce Companion or Bond.
 
 - **Warmth does not move.** The crowd-diluted co-presence-2 sum (the epoch-3 campfire addressing rule included), every qualifying observation's individual contribution, the directed/Musebuck context roles, and the no-stacking rule for one observation window are all untouched; every published warmth value is bit-identical to pub-1.1's.

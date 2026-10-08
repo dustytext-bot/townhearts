@@ -365,32 +365,53 @@ def test_gate7_observations_within_six_hours_collapse_into_one_session():
     """Snar 7: consecutive qualifying observations <= 6h apart collapse
     into one session (exactly 6h = the session-merge edge: two expected
     three-hour intervals)."""
-    assert REF.split_sessions([T0, T0 + timedelta(hours=6)]) == 1
+    assert REF.split_sessions([T0, T0 + timedelta(hours=6)]) == (1, False)
     assert REF.split_sessions([T0, T0 + timedelta(hours=1),
-                               T0 + timedelta(hours=6)]) == 1
+                               T0 + timedelta(hours=6)]) == (1, False)
     assert REF.split_sessions([T0, T0 + timedelta(hours=3),
                                T0 + timedelta(hours=6),
-                               T0 + timedelta(hours=9)]) == 1
+                               T0 + timedelta(hours=9)]) == (1, False)
 
 
 def test_gate8_gap_greater_than_six_hours_starts_another_session():
-    """Snar 8: a gap greater than 6 hours starts another session."""
-    assert REF.split_sessions([T0, T0 + timedelta(hours=6, seconds=1)]) == 2
-    assert REF.split_sessions([T0, T0 + timedelta(hours=7)]) == 2
-    assert REF.split_sessions([T0, T0 + timedelta(hours=12)]) == 2
+    """Snar 8 + audit-2: a gap greater than 6 hours starts another session
+    WHEN the retained read stream vouches the boundary — a retained read
+    sits strictly inside the gap (the system was reading during the
+    interval and did not observe the pair together)."""
+    assert REF.split_sessions([T0, T0 + timedelta(hours=6, seconds=1)],
+                              [T0 + timedelta(hours=3)]) == (2, False)
+    assert REF.split_sessions([T0, T0 + timedelta(hours=7)],
+                              [T0 + timedelta(hours=1)]) == (2, False)
+    assert REF.split_sessions([T0, T0 + timedelta(hours=12)],
+                              [T0 + timedelta(hours=5, minutes=20),
+                               T0 + timedelta(hours=9, minutes=40)]) == (2, False)
+
+
+def test_gate8b_unvouched_gap_never_splits_and_flags_the_count():
+    """Audit-2 (owner call 2026-10-07 21:56): a >6h gap the retained read
+    stream CANNOT vouch (an outage era — no reads inside) NEVER splits a
+    session: the count stays a LOWER BOUND (it may understate persistence;
+    it can never be inflated by the collector's own outage eras) and the
+    partial flag is TRUE — an ambiguous gap helps unlock nothing."""
+    assert REF.split_sessions([T0, T0 + timedelta(hours=6, seconds=1)]) == (1, True)
+    assert REF.split_sessions([T0, T0 + timedelta(hours=7)]) == (1, True)
+    assert REF.split_sessions([T0, T0 + timedelta(hours=12)]) == (1, True)
+    # no ledger passed at all = nothing can be vouched = the conservative fold:
+    assert REF.split_sessions([T0, T0 + timedelta(hours=3),
+                               T0 + timedelta(hours=10)]) == (1, True)
 
 
 def test_gate9_multiple_speeches_add_no_sessions():
     """Snar 9: multiple speeches in the same observation/session add no
     sessions — a session is a run of qualifying OBSERVATIONS; duplicate
     instants and within-6h neighbors collapse into the same run."""
-    assert REF.split_sessions([T0, T0, T0 + timedelta(hours=5)]) == 1
-    assert REF.split_sessions([T0, T0]) == 1
+    assert REF.split_sessions([T0, T0, T0 + timedelta(hours=5)]) == (1, False)
+    assert REF.split_sessions([T0, T0]) == (1, False)
     # the aggregate echo: no published edge can reach session counts from
     # speech volume alone — sessions >= 1 and never absurdly large for the
     # pair's warmth-driven observation reality is guaranteed by the gate
     # recompute (check_consistency's raw recompute); here the pure rule:
-    assert REF.split_sessions([T0] * 50) == 1
+    assert REF.split_sessions([T0] * 50) == (1, False)
 
 
 def test_gate10_public_output_aggregates_only_never_timestamps():

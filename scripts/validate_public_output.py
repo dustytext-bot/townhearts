@@ -8,7 +8,7 @@ own consistency check, before/within publication):
     python3 scripts/validate_public_output.py [--dir DIR] [--schema PATH]
 
 Validates graph.json + graph_24h/7d/30d.json (default dir:
-$TOWNHEARTS_PUBLIC_DIR, else /home/openpi/townhearts-public/data) against
+$TOWNHEARTS_PUBLIC_DIR, else the repo's own data/ directory) against
 
   - the public-3 JSON Schema (default: data/graph.schema.json), and
   - the semantic rules JSON Schema cannot express: the four files describe
@@ -51,7 +51,7 @@ sys.path.insert(0, os.path.join(REPO, "reference"))
 # published data and zone_rules.js (test_tracker.py enforces that).
 from scoring_reference import tier_gate_public, tier_of_evidence  # noqa: E402
 
-PUBLIC_DIR_FALLBACK = "/home/openpi/townhearts-public/data"
+PUBLIC_DIR_FALLBACK = os.path.join(REPO, "data")
 DEFAULT_SCHEMA = os.path.join(REPO, "data", "graph.schema.json")
 
 PUB_FILES = ("graph.json", "graph_24h.json", "graph_7d.json", "graph_30d.json")

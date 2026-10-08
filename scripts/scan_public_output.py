@@ -6,7 +6,7 @@ The fail-closed guard for anything that leaves the private boundary:
     python3 scripts/scan_public_output.py [--dir DIR]
 
 Checks EVERY file in the published data directory (default
-$TOWNHEARTS_PUBLIC_DIR, else /home/openpi/townhearts-public/data):
+$TOWNHEARTS_PUBLIC_DIR, else the repo's own data/ directory):
 
   - allowlist: the directory may contain exactly the published set —
     graph.json, graph_24h.json, graph_7d.json, graph_30d.json and, when the
@@ -34,7 +34,7 @@ import json
 import os
 import sys
 
-PUBLIC_DIR_FALLBACK = "/home/openpi/townhearts-public/data"
+PUBLIC_DIR_FALLBACK = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data")
 
 ALLOWLIST = ("graph.json", "graph_24h.json", "graph_7d.json", "graph_30d.json",
              "graph.schema.json")

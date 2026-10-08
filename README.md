@@ -98,6 +98,7 @@ Aggregated, co-presence-based, public-square data only — and the operational o
 ## Test & CI
 
 ```sh
+python3 -m pip install -r requirements-dev.txt    # test/tool deps (pytest; numpy only for scripts/beat-analyze)
 python3 -m pytest test_tracker.py -v          # public suite (incl. all guards)
 node test_assets/render_check.js index.html test_assets/xss_fixture.json
 node test_assets/zone_check.js

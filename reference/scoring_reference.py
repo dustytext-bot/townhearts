@@ -85,15 +85,21 @@ QUALIFYING_RULE = ("a qualifying observation is one that contributes positive "
                    "warmth under the current scoring rules; consecutive "
                    "qualifying observations 6 hours or less apart are ONE "
                    "session (two expected three-hour intervals); a gap "
-                   "greater than 6 hours starts a new session; multiple "
-                   "collector reads during one continuous visit are one "
-                   "session, and multiple speeches in one session add none")
+                   "greater than 6 hours starts a new session only when the "
+                   "retained read stream vouches the boundary (a retained "
+                   "read sits inside the gap) — outage gaps nothing watched "
+                   "merge instead and flag the counts as lower bounds; "
+                   "multiple collector reads during one continuous visit are "
+                   "one session, and multiple speeches in one session add "
+                   "none")
 PARTIAL_RULE = ("session/day counts come from the complete retained town-read "
-                "stream; for pairs whose qualifying evidence is not fully "
-                "carried by retained reads (legacy attribution) or spans a "
-                "retained-read gap greater than the 6-hour session horizon, "
-                "evidence_partial stays TRUE forever rather than inferring "
-                "continuity across the gap")
+                "stream; a session boundary is vouched only when a retained "
+                "read falls inside the gap that starts it, so an outage era "
+                "can never inflate or invent a session — its junctions merge "
+                "and the count is then a lower bound; pairs whose qualifying "
+                "evidence is not fully carried by retained reads (legacy "
+                "attribution) or spans a retained-read gap greater than the "
+                "6-hour session horizon carry evidence_partial TRUE forever")
 
 
 def tier_gate_public() -> dict:
@@ -187,22 +193,42 @@ def warmth_from_group_sizes(sizes) -> float:
     return total
 
 
-def split_sessions(qual_dts) -> int:
-    """Session count from qualifying-observation datetimes: consecutive
-    observations <= 6 hours apart belong to ONE session (two expected
-    three-hour intervals — exactly 6h apart is still one); a gap GREATER
-    than 6 hours starts another. Input order is normalized here
-    (sorted); duplicate instants collapse into the same session.
+def split_sessions(qual_dts,
+                   read_instants=None) -> "tuple[int, bool]":
+    """Session count + the count-quality flag from qualifying-observation
+    datetimes, VOUCHED against the retained read stream (audit-2 fix,
+    owner call 2026-10-07 21:56):
+
+        consecutive qualifying observations <= 6 hours apart belong to ONE
+        session (two expected three-hour intervals — exactly 6h apart is
+        still one); a gap GREATER than 6 hours starts another ONLY when a
+        retained read instant sits STRICTLY inside the gap — the system was
+        reading during that interval and did not observe the pair
+        co-present in a qualifying way (an honest, observed boundary).
+
+    A >6h gap the stream CANNOT vouch (an outage era: no successful reads
+    at all) NEVER splits — the sessions merge across it and the partial
+    flag returns TRUE: the count is then a LOWER BOUND. It may understate
+    persistence; it can never be inflated by the collector's own outage
+    eras — a missing-read gap can never help unlock Companion or Bond.
+    No ledger passed = nothing can be vouched = the conservative fold.
+    Input order is normalized (sorted); duplicate instants collapse.
     (The public mirror of the collector's split_sessions.)"""
     gap = timedelta(hours=SESSION_MERGE_GAP_HOURS)
     if not qual_dts:
-        return 0
+        return 0, False
+    inst = set(read_instants) if read_instants is not None else set()
     ordered = sorted(qual_dts)
     sessions = 1
+    partial = False
     for prev, cur in zip(ordered, ordered[1:]):
-        if cur - prev > gap:
+        if cur - prev <= gap:
+            continue
+        if any(prev < t < cur for t in inst):
             sessions += 1
-    return sessions
+        else:
+            partial = True        # unvouched outage gap: merged, not split
+    return sessions, partial
 
 
 def tier_of(warmth) -> str | None:
@@ -380,14 +406,18 @@ def _self_test() -> None:
     assert tier_of_evidence(30, None, None) == "friendly"   # score-only shape
     assert tier_of_evidence(30, 15, None) == "friendly"     # one without the other
     assert tier_of_evidence(30, None, 21) == "friendly"
-    # session merging (split_sessions, the 6h rule)
+    # session merging (split_sessions, the 6h rule — vouched boundaries,
+    # audit-2 fix: an outage gap never splits or inflates a count)
     from datetime import datetime, timezone
     t0 = datetime(2026, 10, 3, 12, 0, tzinfo=timezone.utc)
-    assert split_sessions([t0, t0]) == 1
-    assert split_sessions([t0, t0 + timedelta(hours=6)]) == 1          # exactly 6h: one
-    assert split_sessions([t0, t0 + timedelta(hours=6, seconds=1)]) == 2
-    assert split_sessions([t0, t0 + timedelta(hours=3), t0 + timedelta(hours=9)]) == 1
-    assert split_sessions([]) == 0
+    assert split_sessions([t0, t0]) == (1, False)
+    assert split_sessions([t0, t0 + timedelta(hours=6)]) == (1, False)  # exactly 6h: one
+    assert split_sessions([t0, t0 + timedelta(hours=6, seconds=1)]) == (1, True)  # unvouched: merged
+    assert split_sessions([t0, t0 + timedelta(hours=6, seconds=1)],
+                          [t0 + timedelta(hours=3)]) == (2, False)      # vouched: two sessions
+    assert split_sessions([t0, t0 + timedelta(hours=3), t0 + timedelta(hours=9)]) == (1, False)
+    assert split_sessions([t0, t0 + timedelta(hours=3), t0 + timedelta(hours=10)]) == (1, True)
+    assert split_sessions([]) == (0, False)
     # the published gate block
     gate = tier_gate_public()
     assert gate["qualifying_sessions"] == {"bond": 15, "companion": 7}

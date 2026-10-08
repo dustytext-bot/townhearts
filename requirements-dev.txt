@@ -1,0 +1,4 @@
+# Test/tool dependencies — python3 -m pip install -r requirements-dev.txt
+# the pytest suite itself needs only pytest; numpy is only for scripts/beat-analyze
+pytest>=8
+numpy

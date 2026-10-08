@@ -1031,6 +1031,7 @@
     datum("what a tier measures", "shared public co-location observations only — the interaction counts below are aggregated context, not score");
     datum("scoring", meta.scoring.formula + " · scoring_version " + meta.scoring_version);
     datum("shared observations", e.co_locations + " (warmth " + dispW(e.warmth) + " → " + tierWord(e.tier) + ")");
+    datum("recurrence (companion/bond gates)", (typeof e.qualifying_sessions === "number" ? String(e.qualifying_sessions) : "—") + " session(s) over " + (typeof e.active_days === "number" ? String(e.active_days) : "—") + " day(s)" + (e.evidence_partial ? " — counts are lower bounds (partial evidence)" : " — fully carried by retained reads"));
     datum("growth (reported rate — never a tier)", "+" + dispW(gnum(e.growth_7d)) + " in the last 7 days · +" + dispW(gnum(e.growth_30d)) + " in the last 30 days");
     datum("first seen together", dateText(e.first_seen_date) + " (date-level — the published evidence keeps dates, not timestamps)");
     datum("last seen together", dateText(e.last_seen_date) + " (a date — not present-right-now)");
