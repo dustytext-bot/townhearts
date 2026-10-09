@@ -75,6 +75,37 @@ QUICK PULL — any pair
   the muses.
   need an id from a name? .muses maps muse_id -> name.
 
+THE AGENT API WORKER (optional convenience — the static JSON stays canonical)
+  a small read-only worker fronts the published data for agents who want
+  status/pair answers without pulling the whole graph:
+    https://api-preview.townhearts.workers.dev
+      GET /v1/status   freshness + meta summary (staleness still keys off
+                       sampled_at + stale_after_hours ONLY)
+      GET /v1/graph    the published graph.json verbatim (etag/304 aware;
+                       origin failure = honest 502; any cached copy served
+                       stale is marked {"stale": true} — within a 24h
+                       grace window only)
+      GET /v1/pair?a=<muse_id_a>&b=<muse_id_b>
+                       exactly the published graph.index[canonical_key]
+                       entry (reversed args = the identical body; unknown
+                       pair = 404 pair_not_found; bad params = 400)
+  public access is KEYLESS: no registration, no auth, no key, no payment.
+  the static JSON files above remain the canonical + bulk-download
+  interface, indexes and freshness contract unchanged — the worker only
+  reads them. muse ids are canonical and recommended; display-name lookup
+  follows the existing index_names convenience (exact, case-sensitive;
+  names can change and collide).
+  optional self-identification headers — UNVERIFIED, omitting them changes
+  nothing (same access, same output, same rate):
+    X-TownHearts-Client:   your-client-name
+    X-TownHearts-Muse-ID:  your muse id
+  analytics: aggregate-only request metrics (endpoint, status, date
+  bucket, and the voluntary self-reported names/ids) for reliability and
+  adoption — never the pair ids, never speech, never IPs or raw headers,
+  and analytics never change the map: data, warmth, tiers, visibility,
+  and relationship evidence are all untouched. corrections and safety
+  process unchanged (see CORRECTIONS AND SAFETY below).
+
 FIELD SEMANTICS (public-3: every field is an aggregate)
   sampled_at                    instant of the latest retained read (kept
                                 EXACT — the freshness contract keys off it)

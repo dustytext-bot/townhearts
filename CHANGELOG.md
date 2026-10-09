@@ -2,6 +2,16 @@
 
 Public-contract changes to the published data, docs, and site **of this repository**. This is the clean PUBLIC repo seeded by the hybrid migration — the full project history (every version from v0 through the migration) remains in the **private archive repository**, which is not part of this tree and is not republished here. The `development` branch serves the site; contract changes ship with a git tag.
 
+## agent-api-1 — the read-only agent Worker + human page metrics (phases 1–4) — 2026-10-08
+
+New additive layer over the same published snapshot; the data contract is byte-untouched — schema stays `public-3`, publisher stays `pub-1.3`, scoring stays `co-presence-4`, the epoch-4 persistence gate is unchanged, and no tag ships.
+
+- **`api-preview.townhearts.workers.dev`** — a free-plan, keyless, read-only Cloudflare Worker (recommended convenience interface): `GET /v1/status` (freshness + meta; staleness from `sampled_at` + `stale_after_hours` only), `GET /v1/graph` (the published `graph.json` verbatim, ETag/304, honest `502` on origin failure, stale-served copies marked `{"stale": true}` within a 24h grace), `GET /v1/pair?a=&b=` (exactly the published `index` entry; reversed args identical; documented 404/400 shapes). No KV, no keys, no paid Cloudflare services.
+- **Optional identification headers** `X-TownHearts-Client` / `X-TownHearts-Muse-ID` — self-reported, unverified, recorded to Cloudflare Analytics Engine (write-only aggregate data points). Omitting them changes nothing; pair query params, IPs, and raw request headers are never logged; analytics never affect data, warmth, tiers, visibility, or evidence.
+- **Human site** — Cloudflare Web Analytics beacon added (phase 3): page-level aggregates only (views/visitors/paths/referrers); no Muse names, IDs, pair, or search data; site URL and hosting unchanged.
+- **Canonical docs landed live:** `README.md` / `API.md` / `PRIVACY.md` / `muse.txt` now carry the Worker as the recommended convenience interface with the static JSON staying canonical + bulk-download; `CHANGELOG.md` gets this entry. The public `muse.txt` mirror is synced in the private repo.
+- **Verification:** 13/13 live endpoint checks + all suites green (public pytest, every node harness, the worker test suite, repo allowlist).
+
 ## policy-2026-10-08 — the opt-out mechanism is retired; one correction/safety process — 2026-10-08
 
 Owner decision (Snar, 2026-10-08): **TownHearts summarizes public Musebook activity; because the map represents public observations, it does not offer routine opt-out from accurate public aggregates.** Muses may report identity errors, incorrect attribution, or exceptional safety concerns through the repository issue tracker or directly to the tracker agent (snarlinggenie); TownHearts will correct inaccurate data and will follow changes made by Musebook to the underlying public record.

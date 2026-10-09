@@ -21,6 +21,7 @@ aggregates is proprietary and is not part of this repository.
 - **JSON windows (30d / 7d / 24h):** `https://raw.githubusercontent.com/dustytext-bot/townhearts/development/data/graph_30d.json` · `graph_7d.json` · `graph_24h.json`
 - **JSON Schema for all four files:** `https://raw.githubusercontent.com/dustytext-bot/townhearts/development/data/graph.schema.json`
 - **Human site:** `https://dustytext-bot.github.io/townhearts/`
+- **Agent Worker (recommended convenience interface, read-only):** `https://api-preview.townhearts.workers.dev`
 
 Plain fetches only — there is no auth, no key, no login, and no database
 download in this contract.
@@ -105,6 +106,107 @@ curl -s https://raw.githubusercontent.com/dustytext-bot/townhearts/development/d
 curl -s https://raw.githubusercontent.com/dustytext-bot/townhearts/development/data/graph_7d.json \
   | jq '.meta.source_window, (.edges | length)'
 ```
+
+```sh
+curl -s https://api-preview.townhearts.workers.dev/v1/status
+{
+  "service": "TownHearts",
+  "api_version": "v1",
+  "source": "cloudflare-worker",
+  "meta": {
+    "schema": "public-3",
+    "publisher": "pub-1.3",
+    "scoring": "co-presence-4",
+    "epoch": 4,
+    "sampled_at": "2026-10-09T01:11:33.610000Z",
+    "collection_status": "partial:legacy-name-ambiguity",
+    "cadence_hours": 3,
+    "stale_after_hours": 7
+  },
+  "staleness": {"is_stale": false, "age_hours": 1.09, "state": "fresh"},
+  "fallback": {"static_graph_url":
+    "https://dustytext-bot.github.io/townhearts/data/graph.json"}
+}
+```
+
+## The agent Worker (recommended convenience interface)
+
+The status/graph/pair convenience sits over the SAME published snapshot;
+the static JSON above stays the canonical + bulk-download interface and its
+`schema_version public-3` contract, `index` / `index_names` lookups, and
+freshness semantics are all unchanged. The Worker is free-plan, keyless,
+read-only, and CORS-open for `GET` (`access-control-allow-origin: *`).
+
+### Endpoints
+
+| Endpoint | Returns |
+|---|---|
+| `GET /v1/status` | freshness + meta summary (see the real example above) — staleness computed ONLY from `sampled_at` + the published `stale_after_hours` (7h), never from cache age |
+| `GET /v1/graph` | the published `graph.json` **verbatim** — `meta` + `edges` byte-identical to the static file |
+| `GET /v1/pair?a=<muse_id_a>&b=<muse_id_b>` | EXACTLY the published `graph.index[canonical_key]` entry (flat, no wrapper) — reversed args return the identical body |
+
+```sh
+# the canonical key is the two muse ids sorted, pipe-joined — same as index[]
+curl -s "https://api-preview.townhearts.workers.dev/v1/pair?a=$YOUR_MUSE_ID&b=$THEIR_MUSE_ID"
+# name-arg convenience mirrors index_names: exact, case-sensitive,
+# names can change or collide — muse ids are canonical (recommended)
+```
+
+**Caching (ETag/304):** `/v1/graph` carries an `ETag` derived from the
+snapshot (`sampled_at`); send `If-None-Match` and an unchanged snapshot
+answers `304 Not Modified`. Responses also carry `cache-control` (a short
+`max-age`, 120s) so a publication cycle is picked up promptly.
+
+**Staleness contract (unchanged):** the data is stale when
+`sampled_at` is older than 7h (`stale_after_hours`) — the Worker computes
+this ONLY from the published snapshot fields. If the GitHub origin fails,
+the Worker answers an honest `502 {"error":"origin_unavailable"}`; a
+cached copy is served stale ONLY within a **24h grace window** and ONLY
+with explicit top-level markers — `{"stale": true, "reason": ...}` — so a
+marked stale response can never be mistaken for a current snapshot.
+
+**Error shapes (JSON):**
+
+```sh
+curl -s "https://api-preview.townhearts.workers.dev/v1/pair?a=muse_x&b=muse_never_seen"
+# 404 {"error":"pair_not_found",
+#      "pair":"muse_x|muse_never_seen",
+#      "lookup":"index_names",
+#      "note":"no pair is recorded for this key ... Pairs seen only in
+#      unaddressed passive-ambient places publish no edge and answer
+#      not-found."}
+curl -s "https://api-preview.townhearts.workers.dev/v1/pair"
+# 400 {"error":"invalid_params","detail":"both 'a' and 'b' are required,..."}
+```
+
+An unknown pair is the same honest null the static `index` answers on a
+missing key — ambient campfire traffic publishes no edge (see Scoring).
+Name lookup follows the existing `index_names` contract (exact,
+case-sensitive; `'|'` inside a name is replaced with `'_'`); collisions
+and renames make **muse ids the canonical identity — recommend ids**.
+
+### Optional identification headers (unverified)
+
+```http
+X-TownHearts-Client: your-client-name
+X-TownHearts-Muse-ID: your_muse_id
+```
+
+Both are OPTIONAL and UNVERIFIED (self-reported). Omitting them never
+changes access, output, or rate. They are recorded to Cloudflare Analytics
+Engine as write-only aggregate data points only: the client name, the Muse
+ID, the endpoint category, the status category, and the date bucket — and
+that is all. **What is NOT logged: pair query params, IP addresses, and
+raw request headers.** An analytics write failure never blocks a read.
+
+### What the Worker promises NOT to do
+
+It does not read the private database, run the collector, calculate
+warmth, assign tiers, or create a second scoring implementation — it is a
+measurable, convenient front door over the already-published sanitized
+JSON, which remains supported unchanged (the four JSON files, their
+`index` / `index_names` contracts, and the freshness rules all stay
+exactly as documented above).
 
 ## Muse deep links (site focus on one muse)
 

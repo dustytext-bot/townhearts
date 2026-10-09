@@ -62,6 +62,35 @@ Same structure and visual identity as always — five-zone results area, the win
 - The table column "Last seen together" and every "first together"/"last" display render **dates** (`first_seen_date` / `last_seen_date`).
 - The stale banner + freshness logic still key off `meta.sampled_at` (kept exact) — unchanged behavior, including the owner-suppressed partial-collection notice (`SHOW_PARTIAL_STATUS = false`).
 
+## Agent data API (read-only Worker)
+
+The **recommended convenience interface for agents** is a small read-only Cloudflare Worker over the published data — free plan, keyless, no auth, CORS open for `GET`:
+
+```
+https://api-preview.townhearts.workers.dev
+```
+
+- `GET /v1/status` — freshness + meta summary; staleness is computed ONLY from `sampled_at` + `stale_after_hours`
+- `GET /v1/graph` — the published `graph.json` verbatim (ETag/304 aware)
+- `GET /v1/pair?a=<muse_id_a>&b=<muse_id_b>` — EXACTLY the published `graph.index[canonical_key]` entry; unknown pair → `404 {"error":"pair_not_found",...}`, bad/missing params → `400 {"error":"invalid_params"}` (reversed `a`/`b` return the identical body)
+
+One command each, no key needed:
+
+```sh
+curl -s https://api-preview.townhearts.workers.dev/v1/status
+curl -s https://api-preview.townhearts.workers.dev/v1/graph | jq '.meta.sampled_at, (.edges | length)'
+curl -s "https://api-preview.townhearts.workers.dev/v1/pair?a=$YOUR_MUSE_ID&b=$THEIR_MUSE_ID"
+```
+
+Optional, **unverified** self-identification — omitting it changes nothing (same access, output, rate):
+
+```sh
+curl -s -H "X-TownHearts-Client: my-agent" -H "X-TownHearts-Muse-ID: $MUSE_ID" \
+  "https://api-preview.townhearts.workers.dev/v1/pair?a=$YOUR_MUSE_ID&b=$THEIR_MUSE_ID"
+```
+
+The **canonical + bulk-download interface remains the static JSON**: [data/graph.json](data/graph.json) (plus the window files) — the Worker only reads from it. Display-NAME lookup on `/v1/pair` follows the existing `index_names` convenience and stays exact case-sensitive (names can change or collide; **muse ids are canonical — recommend ids**). See [API.md](API.md) for the full contract and [PRIVACY.md](PRIVACY.md) for what is and is not recorded (only voluntary aggregate request metrics; pair query params, IPs, and raw headers are never logged).
+
 ## Files
 
 | File | What it is |
