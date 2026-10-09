@@ -66,7 +66,7 @@ const MAX_PARAM_LENGTH = 128;
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS, HEAD',
   'Access-Control-Allow-Headers': 'X-TownHearts-Client, X-TownHearts-Muse-ID',
   'Access-Control-Max-Age': '86400',
 };
@@ -437,9 +437,10 @@ export default {
       // request is answered but not recorded.
       return jsonResponse({ error: 'not_found' }, 404);
     }
-    if (request.method !== 'GET') {
+    const isHead = request.method === 'HEAD';
+    if (request.method !== 'GET' && !isHead) {
       const res = jsonResponse({ error: 'method_not_allowed' }, 405, {
-        Allow: 'GET, OPTIONS',
+        Allow: 'GET, OPTIONS, HEAD',
       });
       recordMetrics(env, request, endpoint, res.status, false, startedAt);
       return res;
@@ -456,6 +457,13 @@ export default {
       res = jsonResponse({ error: 'internal_error' }, 500);
     }
     recordMetrics(env, request, endpoint, res.status, stats.cacheHit, startedAt);
+    // HEAD answers with GET's status + headers and NO body (spec: no body in
+    // a HEAD response; the ETag/CORS/Cache-Control all ride the headers).
+    if (isHead) {
+      const headHeaders = {};
+      res.headers.forEach((v, k) => { headHeaders[k] = v; });
+      return new Response(null, { status: res.status, headers: headHeaders });
+    }
     return res;
   },
 };

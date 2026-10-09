@@ -582,12 +582,12 @@ test('CORS headers on every response; OPTIONS answers 204', async () => {
   assert.equal(preflight.status, 204);
   assert.equal(await preflight.text(), '');
   assert.equal(preflight.headers.get('Access-Control-Allow-Origin'), '*');
-  assert.equal(preflight.headers.get('Access-Control-Allow-Methods'), 'GET, OPTIONS');
+  assert.equal(preflight.headers.get('Access-Control-Allow-Methods'), 'GET, OPTIONS, HEAD');
 
   for (const path of ['/v1/status', '/v1/graph', '/v1/pair?a=muse_alpha&b=muse_beta']) {
     const res = await runWorker(workerRequest(path), env);
     assert.equal(res.headers.get('Access-Control-Allow-Origin'), '*', path);
-    assert.equal(res.headers.get('Access-Control-Allow-Methods'), 'GET, OPTIONS', path);
+    assert.equal(res.headers.get('Access-Control-Allow-Methods'), 'GET, OPTIONS, HEAD', path);
   }
   const notFound = await runWorker(workerRequest('/v1/unknown'), env);
   assert.equal(notFound.status, 404);
@@ -597,12 +597,23 @@ test('CORS headers on every response; OPTIONS answers 204', async () => {
 test('non-GET methods on known endpoints return 405 with Allow', async () => {
   const graph = makeGraph();
   const env = makeEnv({ originBody: graph });
-  for (const method of ['POST', 'PUT', 'DELETE', 'HEAD']) {
+  for (const method of ['POST', 'PUT', 'DELETE']) {
     const res = await runWorker(
       workerRequest('/v1/graph', { method }), env);
     assert.equal(res.status, 405, method);
-    assert.equal(res.headers.get('Allow'), 'GET, OPTIONS');
+    assert.equal(res.headers.get('Allow'), 'GET, OPTIONS, HEAD');
   }
+});
+
+test('HEAD answers with GET status + headers and no body', async () => {
+  const graph = makeGraph();
+  const env = makeEnv({ originBody: graph });
+  const res = await runWorker(workerRequest('/v1/graph', { method: 'HEAD' }), env);
+  assert.equal(res.status, 200);
+  assert.equal(await res.text(), '');
+  assert.ok(res.headers.get('ETag'), 'etag rides the headers');
+  assert.equal(res.headers.get('Access-Control-Allow-Origin'), '*');
+  assert.equal(res.headers.get('X-TownHearts-Stale'), null, 'fresh = no stale header');
 });
 
 // ---------------------------------------------------------------------------
