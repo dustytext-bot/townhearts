@@ -307,11 +307,11 @@ test('/v1/pair exact case-sensitive name lookup via index_names', async () => {
   );
   assert.equal(res.status, 200);
   const body = await bodyJson(res);
-  assert.deepEqual(body.pair, graph.index_names['Alpha|Beta']);
+  assert.deepEqual(body, graph.index_names['Alpha|Beta']);
   // Reversed display names resolve to the same entry.
   const rev = await bodyJson(
     await runWorker(workerRequest('/v1/pair?a=Beta&b=Alpha'), env));
-  assert.deepEqual(rev.pair, body.pair);
+  assert.deepEqual(rev, body);
 });
 
 test('/v1/pair name lookup is exact and case-sensitive (documented)', async () => {
@@ -370,7 +370,9 @@ test('/v1/pair origin failure is honest (502 or explicitly stale cached copy)', 
   assert.equal(res.status, 200);
   const body = await bodyJson(res);
   assert.equal(body.stale, true, 'stale-served pair must be explicitly marked');
-  assert.deepEqual(body.pair, graph.index['muse_alpha|muse_beta']);
+  assert.deepEqual(
+    { ...body, stale: undefined, reason: undefined },
+    { ...graph.index['muse_alpha|muse_beta'], stale: undefined, reason: undefined });
 
   // No cache at all → honest 502.
   resetHarness();
