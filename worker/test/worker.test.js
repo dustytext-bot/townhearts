@@ -238,7 +238,7 @@ test('/v1/pair returns exactly the published index entry', async () => {
   );
   assert.equal(res.status, 200);
   const body = await bodyJson(res);
-  assert.deepEqual(body.pair, graph.index[pairKey(idA, idB)]);
+  assert.deepEqual(body, graph.index[pairKey(idA, idB)]);
   assertNoProhibitedFields(body, 'pair');
 });
 
@@ -251,8 +251,7 @@ test('/v1/pair reversed parameters yield the same canonical pair', async () => {
   const rev = await bodyJson(
     await runWorker(
       workerRequest('/v1/pair?a=muse_beta&b=muse_alpha'), env));
-  assert.deepEqual(rev.pair, fwd.pair);
-  assert.equal(rev.pair.pair, fwd.pair.pair);
+  assert.deepEqual(rev, fwd);
 });
 
 test('/v1/pair unknown pair returns the documented 404', async () => {

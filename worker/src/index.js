@@ -317,7 +317,9 @@ async function handlePair(request, env, stats) {
       { 'Cache-Control': 'public, max-age=60' },
     );
   }
-  const body = { pair: entry };
+  // Respond with exactly the published index entry — the same object shape
+  // as graph.index[key] (no wrapper, no added fields).
+  const body = { ...entry };
   if (g.stale) {
     body.stale = true;
     body.reason = g.reason;
