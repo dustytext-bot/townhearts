@@ -7,34 +7,47 @@
  *
  *   GET /v1/status — snapshot metadata + deterministic staleness state
  *                    (computed ONLY from sampled_at + stale_after_hours).
- *   GET /v1/graph  — passthrough of the published graph (meaning and values
- *                    preserved; ETag from sampled_at; If-None-Match /
- *                    If-Modified-Since → 304; honest 502 or explicitly
- *                    stale-marked cached copy within a 24h grace window).
+ *   GET /v1/graph  — BYTE-FOR-BYTE passthrough of the published graph
+ *                    (the raw origin response text is served verbatim;
+ *                    ETag from sampled_at; If-None-Match /
+ *                    If-Modified-Since → 304; honest 502 or a cached
+ *                    copy served verbatim within a 24h grace window —
+ *                    staleness is signaled in HEADERS ONLY:
+ *                    X-TownHearts-Stale: true and
+ *                    Warning: 110 - "Response is stale"; the body never
+ *                    carries stale/reason markers).
  *   GET /v1/pair?a=<id>&b=<id> — one pair read from the PUBLISHED index
- *                    (canonical key = the two ids sorted, pipe-joined).
- *                    If the id-key lookup misses, an exact case-sensitive
- *                    lookup of the same sorted key in the published
- *                    index_names is tried (convenience only: names can
- *                    change and collide; ids are canonical).
+ *                    (canonical key = the two ids sorted, pipe-joined);
+ *                    the body is EXACTLY graph.index[canonical_key] in
+ *                    every case (no wrapper, no added fields); staleness
+ *                    rides the same two headers only. If the id-key
+ *                    lookup misses, an exact case-sensitive lookup of
+ *                    the same sorted key in the published index_names is
+ *                    tried (convenience only: names can change and
+ *                    collide; ids are canonical).
  *
  * Privacy contract (enforced by tests):
  *   - No pair params, IP addresses, or raw headers are logged anywhere.
  *   - X-TownHearts-Client / X-TownHearts-Muse-ID are OPTIONAL: recorded
  *     (muse id as a blob) when present, never required, never echoed,
- *     never affect any response body.
+ *     never affect any response body. Values are bound BEFORE storage:
+ *     clipped to 96 characters, and DISCARDED entirely (recorded as the
+ *     'anon' index with no blob) when they contain any control
+ *     character (ASCII < 0x20 or 0x7F).
  *   - Analytics Engine writes are wrapped so failure never blocks a read.
  *   - No KV binding. Read-only against one canonical origin URL.
  *
  * Caching contract (documented; edge-cache TTL itself is not testable
  * locally): the Worker keeps a per-isolate cache of the last successful
- * origin fetch with a conservative TTL (CACHE_TTL_SECONDS, default 120s)
- * that is far below the published 7h staleness window, so a newer
+ * origin fetch, keyed on the published sampled_at, holding the RAW
+ * origin response text. A conservative TTL (CACHE_TTL_SECONDS, default
+ * 120s) sits far below the published 7h staleness window, so a newer
  * published sampled_at becomes visible within at most ~2 minutes of its
  * next /v1/* request. After a cache-TTL expiry the origin is re-fetched;
  * on repeated origin failure a cached copy may be served only within the
- * 24h grace window and only with an explicit top-level {stale: true,
- * reason} marker (or an honest 502 when no copy exists / grace expired).
+ * 24h grace window, VERBATIM (the stored body text, never re-serialized),
+ * with staleness signaled ONLY through the two headers above — or an
+ * honest 502 when no copy exists / grace expired.
  */
 
 const SERVICE = 'TownHearts';
@@ -61,8 +74,10 @@ const CORS_HEADERS = {
 /**
  * Per-isolate cache of the last successful origin fetch. Single variable
  * (not a Map) — the Worker reads exactly one canonical document.
- * Shape: {graph, etag, sampledAt, fetchedAt, lastGoodAt} where fetchedAt
- * drives the TTL and lastGoodAt drives the grace window.
+ * Shape: {text, graph, etag, sampledAt, fetchedAt, lastGoodAt} where
+ * `text` is the raw origin response body (served verbatim — the cached
+ * storage keys on sampled_at and never re-serializes), fetchedAt drives
+ * the TTL and lastGoodAt drives the grace window.
  */
 let cache = null;
 
@@ -91,8 +106,9 @@ async function etagFor(sampledAt) {
 
 /**
  * Fetch (or reuse) the published graph. Never throws. Returns
- * {ok:true, graph, etag, sampledAt, cacheHit, stale?, reason?} or
- * {ok:false, error:'origin_unavailable', detail}.
+ * {ok:true, text, graph, etag, sampledAt, cacheHit, stale?} or
+ * {ok:false, error:'origin_unavailable', detail}. `text` is the raw
+ * origin response body — served verbatim on /v1/graph, byte-for-byte.
  */
 async function loadGraph(env) {
   const url = (env && env.ORIGIN_DATA_URL) || DEFAULT_ORIGIN;
@@ -108,7 +124,11 @@ async function loadGraph(env) {
       },
     });
     if (!res.ok) throw new Error(`origin returned HTTP ${res.status}`);
-    const graph = await res.json();
+    // Keep the RAW bytes: the fresh /v1/graph body is this text verbatim
+    // (byte-for-byte equivalent to the published graph.json — never
+    // re-serialized through JSON.parse/stringify on the response path).
+    const text = await res.text();
+    const graph = JSON.parse(text); // validation + index reads only
     if (
       !graph ||
       typeof graph !== 'object' ||
@@ -120,6 +140,7 @@ async function loadGraph(env) {
     }
     const etag = await etagFor(graph.meta.sampled_at);
     cache = {
+      text,
       graph,
       etag,
       sampledAt: graph.meta.sampled_at,
@@ -130,15 +151,7 @@ async function loadGraph(env) {
   } catch (err) {
     const graceMs = GRACE_WINDOW_HOURS * 3600 * 1000;
     if (cache && now - cache.lastGoodAt <= graceMs) {
-      return {
-        ok: true,
-        ...cache,
-        cacheHit: true,
-        stale: true,
-        reason:
-          `origin fetch failed (${err && err.message ? err.message : 'unknown error'}); ` +
-          `serving the cached copy within the ${GRACE_WINDOW_HOURS}h grace window`,
-      };
+      return { ok: true, ...cache, cacheHit: true, stale: true };
     }
     return {
       ok: false,
@@ -146,6 +159,18 @@ async function loadGraph(env) {
       detail: err && err.message ? err.message : 'unknown error',
     };
   }
+}
+
+/**
+ * Staleness is signaled in HEADERS ONLY (never body fields): a cached
+ * copy served beyond the TTL carries X-TownHearts-Stale: true and
+ * Warning: 110 - "Response is stale".
+ */
+function staleHeaders() {
+  return {
+    'X-TownHearts-Stale': 'true',
+    Warning: '110 - "Response is stale"',
+  };
 }
 
 function jsonResponse(body, status, extraHeaders = {}) {
@@ -205,7 +230,8 @@ async function handleStatus(request, env, stats) {
     staleness: stalenessOf(m),
     fallback: { static_graph_url: FALLBACK_STATIC_URL },
   };
-  if (g.stale) body.notice = g.reason;
+  if (g.stale) body.notice =
+    'served from cache beyond the TTL within the ' + GRACE_WINDOW_HOURS + 'h grace window';
   return jsonResponse(body, 200, { 'Cache-Control': 'public, max-age=60' });
 }
 
@@ -221,6 +247,7 @@ async function handleGraph(request, env, stats) {
     'Last-Modified': lastModified,
     'Cache-Control': 'public, max-age=120',
   };
+  if (g.stale) Object.assign(baseHeaders, staleHeaders());
 
   const ifNoneMatch = request.headers.get('If-None-Match');
   const ifModifiedSince = request.headers.get('If-Modified-Since');
@@ -234,14 +261,18 @@ async function handleGraph(request, env, stats) {
     return new Response(null, { status: 304, headers: { ...CORS_HEADERS, ...baseHeaders } });
   }
 
-  // Meaning-preserving passthrough: the published object, re-serialized
-  // without alteration. On origin failure the cached copy is served ONLY
-  // with an explicit top-level stale marker.
-  let body = g.graph;
-  if (g.stale) {
-    body = { ...g.graph, stale: true, reason: g.reason };
-  }
-  return jsonResponse(body, 200, baseHeaders);
+  // BYTE-FOR-BYTE passthrough: the raw origin response text is served
+  // verbatim (fresh or cached — the cached storage holds the body text
+  // keyed on sampled_at and serves it verbatim). Staleness rides the
+  // headers only; the body never gains stale/reason fields.
+  return new Response(g.text, {
+    status: 200,
+    headers: {
+      ...CORS_HEADERS,
+      'Content-Type': 'application/json',
+      ...baseHeaders,
+    },
+  });
 }
 
 function pairParams(url) {
@@ -308,39 +339,61 @@ async function handlePair(request, env, stats) {
         pair: key,
         lookup: via,
         note:
-          'no pair is recorded for this key. Lookup is exact: muse ids are canonical ' +
-          "(recommended; e.g. /v1/pair?a=<muse_id_a>&b=<muse_id_b>); display names are an " +
-          'exact case-sensitive convenience (names can change and collide). Pairs seen ' +
+          'no pair is recorded for this key. Lookup is id-based: muse ids are canonical ' +
+          '(e.g. /v1/pair?a=<muse_id_a>&b=<muse_id_b>). Pairs seen ' +
           'only in unaddressed passive-ambient places publish no edge and answer not-found.',
       },
       404,
       { 'Cache-Control': 'public, max-age=60' },
     );
   }
-  // Respond with exactly the published index entry — the same object shape
-  // as graph.index[key] (no wrapper, no added fields).
-  const body = { ...entry };
-  if (g.stale) {
-    body.stale = true;
-    body.reason = g.reason;
-  }
-  return jsonResponse(body, 200, { 'Cache-Control': 'public, max-age=60' });
+  // Respond with EXACTLY the published index entry — byte-equal JSON of
+  // graph.index[key] in every case (no wrapper, no added fields); a
+  // stale-cached pair is marked by the two staleness headers only.
+  const headers = { 'Cache-Control': 'public, max-age=60' };
+  if (g.stale) Object.assign(headers, staleHeaders());
+  return new Response(JSON.stringify(entry), {
+    status: 200,
+    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json', ...headers },
+  });
 }
 
 /**
  * Analytics Engine write — minimal aggregate event only. Wrapped so an
  * analytics failure can never block or alter a data response. The index is
  * the OPTIONAL self-reported client header (or 'anon'); the OPTIONAL
- * self-reported Muse ID is recorded as a blob when present. Pair query
- * params, IP addresses, and raw headers are never recorded.
+ * self-reported Muse ID is recorded as a blob when present. Values are
+ * bound BEFORE storage: clipped to 96 characters, and any value containing
+ * a control character (ASCII < 0x20 or 0x7F) is DISCARDED (the index falls
+ * to 'anon' / no blob). Pair query params, IP addresses, and raw headers
+ * are never recorded.
  */
+export const MAX_IDENTITY_HEADER_LENGTH = 96;
+
+/**
+ * Bound an optional self-reported header value before storage: trim, clip
+ * to 96 characters, and DISCARD entirely ('') when the value contains any
+ * control character (ASCII < 0x20 or 0x7F). Exported for the tests.
+ */
+export function boundIdentityHeader(name, headers) {
+  const raw = headers.get(name);
+  if (!raw) return '';
+  const trimmed = raw.trim();
+  if (trimmed.length === 0) return '';
+  for (let i = 0; i < trimmed.length; i++) {
+    const code = trimmed.charCodeAt(i);
+    if (code < 0x20 || code === 0x7f) return '';
+  }
+  return trimmed.slice(0, MAX_IDENTITY_HEADER_LENGTH);
+}
+
 function recordMetrics(env, request, endpoint, status, cacheHit, startedAt) {
   try {
     const ae = env && env.TOWNHEARTS_METRICS;
     if (!ae || typeof ae.writeDataPoint !== 'function') return;
     const statusClass = `${String(status).charAt(0)}xx`;
-    const client = (request.headers.get('X-TownHearts-Client') || '').trim().slice(0, 64);
-    const museId = (request.headers.get('X-TownHearts-Muse-ID') || '').trim().slice(0, 64);
+    const client = boundIdentityHeader('X-TownHearts-Client', request.headers);
+    const museId = boundIdentityHeader('X-TownHearts-Muse-ID', request.headers);
     ae.writeDataPoint({
       blobs: [
         endpoint, // 'status' | 'graph' | 'pair'

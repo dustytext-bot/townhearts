@@ -36,6 +36,7 @@ import {
   runWorker,
   bodyJson,
 } from './harness.js';
+import { boundIdentityHeader, MAX_IDENTITY_HEADER_LENGTH } from '../src/index.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURE_PATH = path.join(here, 'fixtures', 'graph_fixture.json');
@@ -164,11 +165,17 @@ test('/v1/graph preserves the published schema and values', async () => {
   );
   assert.equal(res.status, 200);
   assert.match(res.headers.get('Content-Type'), /application\/json/);
-  const body = await bodyJson(res);
+  const text = await res.text();
+  const body = JSON.parse(text);
   assert.deepEqual(body, graph); // byte-for-byte meaning preserved
   assertSchemaShape(body);
   assertNoProhibitedFields(body, 'graph');
   assert.equal('stale' in body, false, 'fresh passthrough must not be stale-marked');
+  // BYTE-FOR-BYTE: the fresh graph body is the raw origin text verbatim
+  // (the harness origin serves JSON.stringify(originBody) — no
+  // re-serialization through JSON.parse/stringify on the response path).
+  assert.equal(text, JSON.stringify(graph),
+    'fresh /v1/graph body must be byte-equal to the origin JSON text');
 });
 
 test('committed fixture is byte-stable and schema-correct', () => {
@@ -340,7 +347,7 @@ test('/v1/graph origin failure returns honest 502 when no cache exists', async (
   assert.equal('stale' in body, false, 'never serve stale data as current');
 });
 
-test('/v1/graph origin failure serves cached copy ONLY with explicit stale marker', async () => {
+test('/v1/graph origin failure serves cached copy verbatim; staleness rides HEADERS only', async () => {
   const graph = makeGraph();
   const env = makeEnv({ originBody: graph, cacheTtlSeconds: 0 });
   // First call populates the cache (origin healthy).
@@ -348,18 +355,24 @@ test('/v1/graph origin failure serves cached copy ONLY with explicit stale marke
   assert.equal(first.status, 200);
 
   // Now the origin dies — with the TTL expired the refetch fails, and the
-  // cached copy may be served ONLY within the grace window, marked stale.
+  // cached copy may be served ONLY within the grace window, verbatim, with
+  // staleness signaled ONLY via the two headers (never body fields).
   const envDown = makeEnv({ originError: new Error('synthetic origin down'), cacheTtlSeconds: 0 });
   const res = await runWorker(workerRequest('/v1/graph'), envDown);
   assert.equal(res.status, 200);
-  const body = await bodyJson(res);
-  assert.equal(body.stale, true);
-  assert.equal(typeof body.reason, 'string');
-  assert.deepEqual({ ...body, stale: undefined, reason: undefined },
-    { ...graph, stale: undefined, reason: undefined });
+  const text = await res.text();
+  const body = JSON.parse(text);
+  assert.deepEqual(body, graph,
+    'stale-served graph body must equal the origin object exactly');
+  assert.equal(text, JSON.stringify(graph),
+    'stale-served graph body must be byte-equal to the origin text');
+  assert.equal('stale' in body, false, 'no stale key in the body');
+  assert.equal('reason' in body, false, 'no reason key in the body');
+  assert.equal(res.headers.get('X-TownHearts-Stale'), 'true');
+  assert.equal(res.headers.get('Warning'), '110 - "Response is stale"');
 });
 
-test('/v1/pair origin failure is honest (502 or explicitly stale cached copy)', async () => {
+test('/v1/pair origin failure is honest (502 or verbatim stale cached copy, headers only)', async () => {
   const graph = makeGraph();
   const env = makeEnv({ originBody: graph, cacheTtlSeconds: 0 });
   await runWorker(workerRequest('/v1/pair?a=muse_alpha&b=muse_beta'), env);
@@ -369,10 +382,12 @@ test('/v1/pair origin failure is honest (502 or explicitly stale cached copy)', 
     workerRequest('/v1/pair?a=muse_alpha&b=muse_beta'), envDown);
   assert.equal(res.status, 200);
   const body = await bodyJson(res);
-  assert.equal(body.stale, true, 'stale-served pair must be explicitly marked');
-  assert.deepEqual(
-    { ...body, stale: undefined, reason: undefined },
-    { ...graph.index['muse_alpha|muse_beta'], stale: undefined, reason: undefined });
+  assert.deepEqual(body, graph.index['muse_alpha|muse_beta'],
+    'stale-served pair body must equal the index entry exactly');
+  assert.equal('stale' in body, false, 'no stale key in the body');
+  assert.equal('reason' in body, false, 'no reason key in the body');
+  assert.equal(res.headers.get('X-TownHearts-Stale'), 'true');
+  assert.equal(res.headers.get('Warning'), '110 - "Response is stale"');
 
   // No cache at all → honest 502.
   resetHarness();
@@ -450,6 +465,45 @@ test('optional identity headers are recorded but never change responses', async 
   assert.equal(call.blobs[4], 'openclaw');
   assert.equal(call.blobs[5], 'muse_alpha');
   assert.equal(call.index, 'openclaw');
+});
+
+test('identity header values longer than 96 characters are clipped before storage', () => {
+  const long = 'c'.repeat(120);
+  const headers = new Headers({ 'X-TownHearts-Client': long });
+  const bound = boundIdentityHeader('X-TownHearts-Client', headers);
+  assert.equal(bound.length, MAX_IDENTITY_HEADER_LENGTH);
+  assert.equal(bound, 'c'.repeat(MAX_IDENTITY_HEADER_LENGTH));
+});
+
+test('identity header values containing control characters are discarded entirely', () => {
+  for (const bad of ['bad\u0001value', 'ok\u007f', '\u001bescaped', 'line\nbreak']) {
+    const headers = new Headers({ 'X-TownHearts-Client': 'innocent' });
+    // Bound the raw value directly (header values with control characters
+    // cannot ride a real Request — undici rejects them — so the bound
+    // function is exercised against a synthetic Headers-like lookup).
+    const synthetic = { get: (n) => (n === 'X-TownHearts-Client' ? bad : null) };
+    const bound = boundIdentityHeader('X-TownHearts-Client', synthetic);
+    assert.equal(bound, '', 'control-char value must be discarded');
+    // And the clean parallel value still passes (the discard is specific).
+    assert.equal(boundIdentityHeader('X-TownHearts-Client', headers), 'innocent');
+  }
+});
+
+test('discarded/clipped identity headers never alter the response body or analytics beyond bounds', async () => {
+  const graph = makeGraph();
+  const analytics = makeAnalytics();
+  const env = makeEnv({ originBody: graph, analytics });
+  const plain = await runWorker(
+    workerRequest('/v1/pair?a=muse_alpha&b=muse_beta'), env);
+  const clipped = await runWorker(
+    workerRequest('/v1/pair?a=muse_alpha&b=muse_beta', {
+      headers: { 'X-TownHearts-Client': 'x'.repeat(150) },
+    }), env);
+  assert.equal(await plain.text(), await clipped.text(),
+    'bounded headers must not change the response body');
+  const call = analytics.calls.at(-1);
+  assert.equal(call.blobs[4], 'x'.repeat(MAX_IDENTITY_HEADER_LENGTH));
+  assert.equal(call.index, 'x'.repeat(MAX_IDENTITY_HEADER_LENGTH));
 });
 
 test('optional identity headers work on /v1/status and /v1/graph too', async () => {

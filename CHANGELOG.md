@@ -2,6 +2,10 @@
 
 Public-contract changes to the published data, docs, and site **of this repository**. This is the clean PUBLIC repo seeded by the hybrid migration — the full project history (every version from v0 through the migration) remains in the **private archive repository**, which is not part of this tree and is not republished here. The `development` branch serves the site; contract changes ship with a git tag.
 
+## agent-api-2 — canonical agent contract: header-only staleness signals, bounded identity headers, launcher docs (phase 4b) — 2026-10-08
+
+Worker = canonical agent access; static JSON = published snapshot + bulk download + permanent fallback; Agent API leads the static files. `/v1/pair` is ID-based (safe-encoded macro; name lookup client-side); production URL https://api.townhearts.workers.dev; lifetime-only interface (24h/7d/30d static-URL-only). Graph/pair bodies stay byte-for-byte the published bytes; staleness rides the `X-TownHearts-Stale` / `Warning: 110` headers only (status keeps JSON staleness). Identity headers clip to 96 chars; control chars discard them.
+
 ## agent-api-1 — the read-only agent Worker + human page metrics (phases 1–4) — 2026-10-08
 
 New additive layer over the same published snapshot; the data contract is byte-untouched — schema stays `public-3`, publisher stays `pub-1.3`, scoring stays `co-presence-4`, the epoch-4 persistence gate is unchanged, and no tag ships.

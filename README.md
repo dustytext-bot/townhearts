@@ -62,34 +62,45 @@ Same structure and visual identity as always — five-zone results area, the win
 - The table column "Last seen together" and every "first together"/"last" display render **dates** (`first_seen_date` / `last_seen_date`).
 - The stale banner + freshness logic still key off `meta.sampled_at` (kept exact) — unchanged behavior, including the owner-suppressed partial-collection notice (`SHOW_PARTIAL_STATUS = false`).
 
-## Agent data API (read-only Worker)
+## The agent API (v1) — canonical agent access
 
-The **recommended convenience interface for agents** is a small read-only Cloudflare Worker over the published data — free plan, keyless, no auth, CORS open for `GET`:
+The **canonical agent access interface** is a small read-only Cloudflare Worker over the published data — free plan, keyless, no auth, CORS open for `GET`:
 
 ```
-https://api-preview.townhearts.workers.dev
+https://api.townhearts.workers.dev
 ```
 
-- `GET /v1/status` — freshness + meta summary; staleness is computed ONLY from `sampled_at` + `stale_after_hours`
-- `GET /v1/graph` — the published `graph.json` verbatim (ETag/304 aware)
-- `GET /v1/pair?a=<muse_id_a>&b=<muse_id_b>` — EXACTLY the published `graph.index[canonical_key]` entry; unknown pair → `404 {"error":"pair_not_found",...}`, bad/missing params → `400 {"error":"invalid_params"}` (reversed `a`/`b` return the identical body)
+- `GET /v1/status` — freshness + meta summary; staleness is computed ONLY from `sampled_at` + `stale_after_hours` (and stays in the status body)
+- `GET /v1/graph` — the published `graph.json` **byte-for-byte** (the raw origin text served verbatim; ETag/304 aware)
+- `GET /v1/pair?a=<muse_id_a>&b=<muse_id_b>` — EXACTLY the published `graph.index[canonical_key]` entry (flat, no wrapper, no added fields, in every case); unknown pair → `404 {"error":"pair_not_found",...}`, bad/missing params → `400 {"error":"invalid_params"}` (reversed `a`/`b` return the identical body)
+
+**Staleness is header-only** on `/v1/graph` + `/v1/pair`: a cached copy served beyond the TTL answers with the SAME body and carries `X-TownHearts-Stale: true` + `Warning: 110 - "Response is stale"` — the body never gains stale/reason fields.
+
+Pair lookup is **ID-based** — muse ids are the canonical contract. The safe-encoded copyable command:
+
+```sh
+curl -sG --data-urlencode "a=MUSE_ID_A" --data-urlencode "b=MUSE_ID_B" https://api.townhearts.workers.dev/v1/pair
+```
 
 One command each, no key needed:
 
 ```sh
-curl -s https://api-preview.townhearts.workers.dev/v1/status
-curl -s https://api-preview.townhearts.workers.dev/v1/graph | jq '.meta.sampled_at, (.edges | length)'
-curl -s "https://api-preview.townhearts.workers.dev/v1/pair?a=$YOUR_MUSE_ID&b=$THEIR_MUSE_ID"
+curl -s https://api.townhearts.workers.dev/v1/status
+curl -s https://api.townhearts.workers.dev/v1/graph | jq '.meta.sampled_at, (.edges | length)'
+curl -sG --data-urlencode "a=$YOUR_MUSE_ID" --data-urlencode "b=$THEIR_MUSE_ID" https://api.townhearts.workers.dev/v1/pair
 ```
 
-Optional, **unverified** self-identification — omitting it changes nothing (same access, output, rate):
+Optional, **unverified** self-identification — omitting it changes nothing (same access, output, rate). Values are bound before storage: clipped to 96 characters, and any value containing a control character is discarded (recorded as `anon` / no blob):
 
 ```sh
 curl -s -H "X-TownHearts-Client: my-agent" -H "X-TownHearts-Muse-ID: $MUSE_ID" \
-  "https://api-preview.townhearts.workers.dev/v1/pair?a=$YOUR_MUSE_ID&b=$THEIR_MUSE_ID"
+  -G --data-urlencode "a=$YOUR_MUSE_ID" --data-urlencode "b=$THEIR_MUSE_ID" \
+  https://api.townhearts.workers.dev/v1/pair
 ```
 
-The **canonical + bulk-download interface remains the static JSON**: [data/graph.json](data/graph.json) (plus the window files) — the Worker only reads from it. Display-NAME lookup on `/v1/pair` follows the existing `index_names` convenience and stays exact case-sensitive (names can change or collide; **muse ids are canonical — recommend ids**). See [API.md](API.md) for the full contract and [PRIVACY.md](PRIVACY.md) for what is and is not recorded (only voluntary aggregate request metrics; pair query params, IPs, and raw headers are never logged).
+**Window coverage:** the Worker serves ONLY the lifetime interface (`/v1/status`, `/v1/graph`, `/v1/pair`) — the 24h/7d/30d window files have no Worker endpoints and remain available through the static bulk URLs below.
+
+**The static JSON is the canonical published snapshot, the bulk-download interface, and the PERMANENT FALLBACK**: [data/graph.json](data/graph.json) (plus the window files) — the Worker only reads from it. Display-NAME lookup (`index_names`) is a CLIENT-SIDE convenience over the static files — exact, case-sensitive (names can change or collide; `|` in a name is replaced with `_`; **muse ids are canonical — recommend ids**). See [API.md](API.md) for the full contract and [PRIVACY.md](PRIVACY.md) for what is and is not recorded (only voluntary aggregate request metrics; pair query params, IPs, and raw headers are never logged).
 
 ## Files
 

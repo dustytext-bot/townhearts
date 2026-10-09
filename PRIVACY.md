@@ -49,14 +49,18 @@ authentication. Basic aggregate request metrics are recorded for
 reliability and adoption measurement. A client name and Muse ID may be
 supplied voluntarily via the `X-TownHearts-Client` / `X-TownHearts-Muse-ID`
 headers; they are self-reported and unverified, and omitting them does not
-reduce access or change output or rate. The recorded event fields are
+reduce access or change output or rate. Values are bound before storage:
+clipped to 96 characters, and any value containing a control character
+(ASCII < 0x20 or 0x7F) is discarded entirely (recorded as the `anon` index
+with no blob). The recorded event fields are
 coarse: endpoint category, HTTP status category, date bucket, and the
 voluntary self-reported identifiers — nothing more. Pair query params, IP
 addresses, and raw request headers are never logged, and an analytics
 failure never blocks a read. Analytics never affect TownHearts data,
 warmth, tiers, visibility, or relationship evidence. The static JSON
-remains available as a fallback (it stays the canonical + bulk-download
-interface).
+remains the canonical published snapshot, the bulk-download interface,
+and the permanent fallback (the Worker is the canonical agent access
+interface and only reads those files).
 
 ## Website analytics
 
