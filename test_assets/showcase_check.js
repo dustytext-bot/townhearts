@@ -238,10 +238,12 @@ const SOC_FIXTURES = { "data/graph.json": socGraph };
 
 function buildSiteSandbox(search, fixtures) {
   const shim = makeShim();
+  const navigations = [];                       // socialite click-throughs (v1.3 profile opens)
   const loc = {
     search, pathname: "/townhearts/", hash: "",
     href: "https://dustytext-bot.github.io/townhearts/" + search,
     replace() {},
+    assign(url) { navigations.push(url); },
   };
   const hist = { replaceState() {} };
   const sandbox = {
@@ -255,7 +257,7 @@ function buildSiteSandbox(search, fixtures) {
   sandbox.window = sandbox;
   vm.createContext(sandbox);
   vm.runInContext(SITE_SCRIPT, sandbox);
-  return { shim, loc };
+  return { shim, loc, navigations };
 }
 
 const sleep = (ms) => new Promise((res) => setTimeout(res, ms));
@@ -541,7 +543,7 @@ const namesOf = (shim, n) => {
   {
     const run = buildSiteSandbox("", SOC_FIXTURES);
     await sleep(60);
-    const { shim } = run;
+    const { shim, navigations } = run;
     if (shim.elementFor("zone-socialites").style.display === "none")
       fail("a non-empty roll must SHOW the Socialites stage on the default page");
     if (shim.elementFor("soc-stage").children.length !== 3)
@@ -606,11 +608,13 @@ const namesOf = (shim, n) => {
     anastasia.fireEvent("blur");
     if (anastasia.className.includes("active")) fail("blur must clear the person");
     anastasia.fireEvent("click");
-    if (!anastasia.className.includes("active") || socPaths[0].className !== "th-path active")
-      fail("clicking a socialite must activate them (tap target)");
-    anastasia.fireEvent("click");
+    // v1.3: a socialite CLICK opens their shareable profile — the canonical
+    // muse id rides ?muse= (names change and collide; the id is the contract)
+    if (JSON.stringify(navigations) !== JSON.stringify(["./?muse=muse_a"]))
+      fail("clicking a socialite must open their shareable profile (?muse=<canonical id>), got " +
+        JSON.stringify(navigations));
     if (anastasia.className.includes("active"))
-      fail("clicking an active socialite must toggle them off (the demo's toggle)");
+      fail("clicking must navigate to the profile, not toggle the stage light");
     // the multi-edge case: hovering the person in the MIDDLE of the web
     // lights BOTH of their paths and reports the count
     const candor = stageBtns[2];                  // shuffled [Anastasia, Elm, Candor]
