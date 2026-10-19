@@ -339,9 +339,13 @@ async function handlePair(request, env, stats) {
         pair: key,
         lookup: via,
         note:
-          'no pair is recorded for this key. Lookup is id-based: muse ids are canonical ' +
-          '(e.g. /v1/pair?a=<muse_id_a>&b=<muse_id_b>). Pairs seen ' +
-          'only in unaddressed passive-ambient places publish no edge and answer not-found.',
+          '404 is the normal answer here, not a client error: the graph publishes an ' +
+          'edge only where qualifying co-presence was recorded, so most possible muse ' +
+          'pairs are simply absent and most pair lookups miss. Lookup is id-based: muse ' +
+          'ids are canonical (for example /v1/pair?a=muse_1c2z322732&b=muse_j03y2bfbin). ' +
+          'To see exactly which pairs exist, GET /v1/graph and read .index (ids) or ' +
+          '.index_names (exact display names). Pairs seen only in unaddressed ' +
+          'passive-ambient places publish no edge and answer not-found.',
       },
       404,
       { 'Cache-Control': 'public, max-age=60' },
@@ -402,6 +406,7 @@ function recordMetrics(env, request, endpoint, status, cacheHit, startedAt) {
         API_VERSION,
         client, // '' when not self-reported
         museId, // '' when not self-reported
+        String(status), // exact status code, for future 4xx audits
       ],
       doubles: [Math.max(0, Math.round(Date.now() - startedAt))], // respMs
       index: client || 'anon',
@@ -439,9 +444,11 @@ export default {
     }
     const isHead = request.method === 'HEAD';
     if (request.method !== 'GET' && !isHead) {
-      const res = jsonResponse({ error: 'method_not_allowed' }, 405, {
-        Allow: 'GET, OPTIONS, HEAD',
-      });
+      const res = jsonResponse(
+        { error: 'method_not_allowed', detail: 'read-only API: use GET (HEAD and OPTIONS are also accepted)' },
+        405,
+        { Allow: 'GET, OPTIONS, HEAD' },
+      );
       recordMetrics(env, request, endpoint, res.status, false, startedAt);
       return res;
     }

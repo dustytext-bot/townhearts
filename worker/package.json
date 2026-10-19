@@ -5,7 +5,7 @@
   "type": "module",
   "description": "TownHearts read-only Cloudflare Worker over the published sanitized graph (Phase 1, local build).",
   "scripts": {
-    "test": "node --test test/"
+    "test": "node --test test/worker.test.js"
   },
   "devDependencies": {
     "wrangler": "^4"

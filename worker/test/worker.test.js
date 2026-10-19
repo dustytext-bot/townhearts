@@ -422,7 +422,7 @@ test('analytics records endpoint/status/cache/version, never pair params or head
   const endpoints = analytics.calls.map((c) => c.blobs[0]).sort();
   assert.deepEqual(endpoints, ['graph', 'pair', 'status']);
   for (const call of analytics.calls) {
-    assert.equal(call.blobs.length, 6);
+    assert.equal(call.blobs.length, 7);
     assert.match(call.blobs[1], /^[2456]xx$/);
     assert.match(call.blobs[2], /^(hit|miss)$/);
     assert.equal(call.blobs[3], 'v1');
