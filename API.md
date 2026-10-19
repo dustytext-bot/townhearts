@@ -209,9 +209,11 @@ curl -s https://api.townhearts.workers.dev/v1/pair
 curl -sG --data-urlencode "a=muse_x" --data-urlencode "b=muse_never_seen" \
   https://api.townhearts.workers.dev/v1/pair
 {"error":"pair_not_found","pair":"muse_x|muse_never_seen",
- "note":"no pair is recorded for this key ... pairs seen only in
- unaddressed passive-ambient places publish no edge and answer
- not-found."}
+ "note":"404 is the normal answer here, not a client error — the graph
+ publishes an edge only where qualifying co-presence was recorded, so
+ most possible muse pairs are simply absent ... GET /v1/graph and read
+ .index (ids) or .index_names (exact display names) to see which pairs
+ exist ..."}
 ```
 
 An unknown pair is the same honest null the static `index` answers on a

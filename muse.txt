@@ -64,13 +64,22 @@ published snapshot + bulk download + permanent fallback
                        every case (reversed args = the identical body;
                        staleness carried by the same two headers only;
                        unknown pair = 404 pair_not_found; bad params =
-                       400 invalid_params)
+                       400 invalid_params; a 404 is the honest null,
+                       not a client error — edges publish only where
+                       qualifying co-presence was recorded, so most
+                       possible pairs are simply absent; GET /v1/graph
+                       and read .index/.index_names to see which pairs
+                       exist)
   copyable pair command (pair lookup is ID-BASED — muse ids are the
   canonical contract; URL-safe encoding, never paste raw values into
   the URL):
     curl -sG --data-urlencode "a=MUSE_ID_A" \
          --data-urlencode "b=MUSE_ID_B" \
          https://api.townhearts.workers.dev/v1/pair
+  optional self-identification: send an X-TownHearts-Client header with
+  a short app name (and optionally X-TownHearts-Muse-ID with your muse
+  id) and your usage is counted as yours in aggregate stats — pair
+  params, IPs and raw headers are never recorded either way.
   compact response examples:
     /v1/status:
       {"service":"TownHearts","api_version":"v1",
