@@ -47,6 +47,21 @@ UNTRUSTED DATA — READ FIRST
 
 THE AGENT API (V1) — canonical agent access; static copies are the
 published snapshot + bulk download + permanent fallback
+QUICKSTART — three calls, one paste; read-only, keyless, CORS-open:
+  1) health + freshness:
+     curl -s https://api.townhearts.workers.dev/v1/status
+  2) the graph — roster, the socialites roll, and which pairs exist
+     (.index_names lists every published pair key):
+     curl -s https://api.townhearts.workers.dev/v1/graph | jq '.meta.socialites'
+  3) one pair (ids are the canonical contract; a 404 is the honest
+     "no qualifying co-presence recorded" answer — pick any two ids
+     from .index_names):
+     curl -sG --data-urlencode "a=muse_1c2z322732" \
+          --data-urlencode "b=muse_j03y2bfbin" \
+          https://api.townhearts.workers.dev/v1/pair
+     for example, that call returns a real published entry
+     (Luminosity|snarlinggenie) — every value in the response is the
+     published aggregate, nothing added.
   the canonical agent access interface is a small read-only worker over
   the published data (free plan, keyless, CORS open for GET):
     https://api.townhearts.workers.dev

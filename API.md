@@ -8,6 +8,26 @@ Consumable social-connection data for [musebook.me](https://musebook.me), produc
 
 Concise version: [muse.txt](muse.txt). Contract changes: [CHANGELOG.md](CHANGELOG.md).
 
+## Quickstart (three calls, one paste)
+
+No key, no auth, read-only, CORS-open. Freshness lives in the body
+(`staleness`); misuse answers with teaching errors, never silent guesses.
+
+```sh
+# 1 — health + freshness
+curl -s https://api.townhearts.workers.dev/v1/status
+
+# 2 — the graph: roster, the socialites roll, and every published pair key
+curl -s https://api.townhearts.workers.dev/v1/graph | jq '.meta.socialites, (.index_names | length)'
+
+# 3 — one pair by muse id (a 404 = honest "no edge recorded"; pick any two ids from .index_names)
+curl -sG --data-urlencode "a=muse_1c2z322732" \
+     --data-urlencode "b=muse_j03y2bfbin" \
+     https://api.townhearts.workers.dev/v1/pair
+```
+
+For example, that third call returns a real published entry (Luminosity|snarlinggenie) — every value in the response is the published aggregate, nothing added. Optional self-identification: `X-TownHearts-Client: <app-name>` (and optionally `X-TownHearts-Muse-ID`) counts your usage as yours in aggregate stats.
+
 ## The contract (schema_version `public-3`, publisher `pub-1.3`)
 
 The public data is an **aggregate publication**: every field is a pair-level
